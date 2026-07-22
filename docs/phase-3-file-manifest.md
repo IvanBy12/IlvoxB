@@ -1,0 +1,74 @@
+# Manifiesto de archivos — Fase 3
+
+## Creados
+
+- `drizzle/migrations/0001_phase3-rbac-separation.sql`
+- `drizzle/migrations/0002_phase3-file-audience.sql`
+- `drizzle/migrations/0003_phase3-clerk-event-idempotency.sql`
+- `drizzle/migrations/meta/0001_snapshot.json`
+- `drizzle/migrations/meta/0002_snapshot.json`
+- `drizzle/migrations/meta/0003_snapshot.json`
+- `drizzle/rollbacks/0001_phase3-rbac-separation.down.sql`
+- `drizzle/rollbacks/0002_phase3-file-audience.down.sql`
+- `drizzle/rollbacks/0003_phase3-clerk-event-idempotency.down.sql`
+- `scripts/validate-phase3-migrations.mjs`
+- `scripts/check-phase3-cleanup.mjs`
+- `src/common/auth/authorization.types.ts`
+- `src/common/auth/authorization.service.ts`
+- `src/common/auth/scope-filter.ts`
+- `src/common/auth/privileged-role.service.ts`
+- `src/common/auth/ticket-client-action.service.ts`
+- `src/modules/files/file-authorization.ts`
+- `src/modules/files/file.repository.ts`
+- `src/modules/files/file-storage.ts`
+- `src/modules/identity/identity.types.ts`
+- `src/modules/identity/identity.repository.ts`
+- `src/modules/identity/identity.service.ts`
+- `src/modules/identity/identity.schemas.ts`
+- `src/modules/identity/identity.routes.ts`
+- `src/modules/webhooks/clerk-webhook.types.ts`
+- `src/modules/webhooks/clerk-webhook.verifier.ts`
+- `src/modules/webhooks/clerk-webhook.service.ts`
+- `src/modules/webhooks/clerk-webhook.routes.ts`
+- `src/plugins/clerk.ts`
+- `src/plugins/auth-context.ts`
+- `tests/helpers/actors.ts`
+- `tests/integration/auth-me.test.ts`
+- `tests/integration/clerk-webhook-verification.test.ts`
+- `tests/integration/phase3-database.test.ts`
+- `tests/unit/authorization.test.ts`
+- `tests/unit/file-authorization.test.ts`
+- `docs/clerk-implementation.md`
+- `docs/authorization-implementation.md`
+- `docs/rbac-migration.md`
+- `docs/file-audience.md`
+- `docs/webhook-idempotency.md`
+- `docs/phase-3-test-results.md`
+- `docs/phase-3-security-review.md`
+- `docs/postgresql-16-validation-pending.md`
+- `docs/phase-3-file-manifest.md`
+
+## Modificados
+
+- `.gitignore`
+- `.env.example`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `drizzle/migrations/meta/_journal.json`
+- `scripts/audit-drizzle-parity.mjs`
+- `src/app.ts`
+- `src/common/errors/error-codes.ts`
+- `src/config/constants.ts`
+- `src/config/env.ts`
+- `src/db/schema/files.ts`
+- `src/db/schema/identity.ts`
+- `src/types/fastify.d.ts`
+- `tests/helpers/build-test-app.ts`
+- `docs/clerk-integration-contract.md`
+- `docs/clerk-webhook-contract.md`
+- `docs/authorization-service-contract.md`
+- `docs/repository-scope-contract.md`
+- `docs/me-endpoint-contract.md`
+
+No se modificó `IlvoxF`, no se creó commit y no se hizo push.

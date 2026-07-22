@@ -141,3 +141,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# ILVOX backend local state
+.env.local
+.env.test.local
+storage/
+tmp/
+drizzle/meta/_snapshot.json

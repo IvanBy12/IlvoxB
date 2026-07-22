@@ -1,0 +1,1605 @@
+{
+  "executedAt": "2026-07-22T22:19:17.338Z",
+  "status": "completed",
+  "connection": {
+    "variable": "DATABASE_URL",
+    "host": "localhost",
+    "port": "5432",
+    "database": "GestionIlvox",
+    "credentialsExposed": false,
+    "version": "18.4",
+    "publicTablesBefore": 19,
+    "pgcryptoPresentBefore": true
+  },
+  "integrity": {
+    "expectedSha256": "46D9EDDF29A0ABC25091E43867D0AC6B11A1AE180BDDF12665254BE9CD178CD6",
+    "original": {
+      "path": "C:\\Users\\leopa\\Downloads\\ilvox_complete_reconstructed.sql",
+      "sha256": "46D9EDDF29A0ABC25091E43867D0AC6B11A1AE180BDDF12665254BE9CD178CD6"
+    },
+    "baseline": {
+      "path": "C:\\Users\\leopa\\OneDrive\\Documentos\\Proyectos\\IlvoxB\\drizzle\\baseline\\0000_ilvox_complete_reconstructed.sql",
+      "sha256": "46D9EDDF29A0ABC25091E43867D0AC6B11A1AE180BDDF12665254BE9CD178CD6"
+    },
+    "match": true
+  },
+  "temporarySchema": "ilvox_validation_20260722_af309243",
+  "sqlApplication": {
+    "result": "passed",
+    "durationMs": 230.97,
+    "notices": [
+      {
+        "severity": "NOTICE",
+        "code": "42710",
+        "message": "la extensión «pgcrypto» ya existe, omitiendo"
+      },
+      {
+        "severity": "NOTICE",
+        "code": "00000",
+        "message": "eliminando además 19 objetos más"
+      }
+    ]
+  },
+  "catalog": {
+    "schemas": [
+      "ilvox_validation_20260722_af309243"
+    ],
+    "tableCount": 19,
+    "tableNames": [
+      "app_users",
+      "audit_events",
+      "deliverables",
+      "files",
+      "identity_webhook_events",
+      "leads",
+      "organization_memberships",
+      "organizations",
+      "permissions",
+      "project_members",
+      "project_milestones",
+      "projects",
+      "role_permissions",
+      "roles",
+      "services",
+      "tasks",
+      "ticket_comments",
+      "tickets",
+      "user_roles"
+    ],
+    "columnCount": 199,
+    "primaryKeys": 19,
+    "uniqueConstraints": 15,
+    "foreignKeys": 43,
+    "checks": 55,
+    "identityColumns": [
+      "tickets.ticket_number"
+    ],
+    "generatedColumns": [
+      {
+        "name": "tickets.code",
+        "expression": "(((('TCK-'::text || (ticket_year)::text) || '-'::text) || repeat('0'::text, GREATEST((6 - length((ticket_number)::text)), 0))) || (ticket_number)::text)"
+      }
+    ],
+    "physicalIndexes": 87,
+    "indexesByCategory": {
+      "unique_constraint": {
+        "count": 15,
+        "names": [
+          "app_users_clerk_user_id_key",
+          "identity_webhook_events_clerk_event_id_key",
+          "permissions_code_key",
+          "services_name_key",
+          "uq_deliverables_id_organization",
+          "uq_files_provider_object_key",
+          "uq_project_milestones_id_organization",
+          "uq_projects_id_organization",
+          "uq_roles_id_scope",
+          "uq_roles_scope_code",
+          "uq_tasks_id_organization",
+          "uq_ticket_comments_id_organization",
+          "uq_tickets_code",
+          "uq_tickets_id_organization",
+          "uq_tickets_ticket_number"
+        ]
+      },
+      "primary_key": {
+        "count": 19,
+        "names": [
+          "app_users_pkey",
+          "audit_events_pkey",
+          "deliverables_pkey",
+          "files_pkey",
+          "identity_webhook_events_pkey",
+          "leads_pkey",
+          "organization_memberships_pkey",
+          "organizations_pkey",
+          "permissions_pkey",
+          "project_members_pkey",
+          "project_milestones_pkey",
+          "projects_pkey",
+          "role_permissions_pkey",
+          "roles_pkey",
+          "services_pkey",
+          "tasks_pkey",
+          "ticket_comments_pkey",
+          "tickets_pkey",
+          "user_roles_pkey"
+        ]
+      },
+      "explicit_index": {
+        "count": 52,
+        "names": [
+          "idx_app_users_primary_email_lower",
+          "idx_app_users_status",
+          "idx_audit_events_actor_created",
+          "idx_audit_events_created",
+          "idx_audit_events_entity",
+          "idx_audit_events_organization_created",
+          "idx_audit_events_request",
+          "idx_deliverables_approved_by",
+          "idx_deliverables_project_status",
+          "idx_files_deliverable",
+          "idx_files_organization_active",
+          "idx_files_project",
+          "idx_files_task",
+          "idx_files_ticket",
+          "idx_files_ticket_comment",
+          "idx_files_uploaded_by",
+          "idx_identity_webhook_events_work_queue",
+          "idx_leads_assigned_to",
+          "idx_leads_converted_organization",
+          "idx_leads_email_lower",
+          "idx_leads_service",
+          "idx_leads_status_created",
+          "idx_organization_memberships_access",
+          "idx_organization_memberships_role_scope",
+          "idx_organization_memberships_user",
+          "idx_organizations_account_manager",
+          "idx_organizations_status",
+          "idx_project_members_assigned_by",
+          "idx_project_members_role_scope",
+          "idx_project_members_user",
+          "idx_project_milestones_due_date",
+          "idx_project_milestones_project_status",
+          "idx_projects_lead",
+          "idx_projects_organization_status",
+          "idx_projects_service",
+          "idx_role_permissions_permission_id",
+          "idx_services_public_active",
+          "idx_tasks_assignee_status",
+          "idx_tasks_due_date",
+          "idx_tasks_organization_status",
+          "idx_tasks_project",
+          "idx_tasks_ticket",
+          "idx_ticket_comments_author",
+          "idx_ticket_comments_client_visible",
+          "idx_ticket_comments_ticket_created",
+          "idx_tickets_assignee_status",
+          "idx_tickets_created_at",
+          "idx_tickets_organization_status",
+          "idx_tickets_project",
+          "idx_tickets_requester",
+          "idx_user_roles_assigned_by",
+          "idx_user_roles_role_scope"
+        ]
+      },
+      "explicit_unique_index": {
+        "count": 1,
+        "names": [
+          "uq_organizations_country_tax_normalized"
+        ]
+      }
+    },
+    "partialIndexes": [
+      "idx_audit_events_request",
+      "idx_files_deliverable",
+      "idx_files_organization_active",
+      "idx_files_project",
+      "idx_files_task",
+      "idx_files_ticket",
+      "idx_files_ticket_comment",
+      "idx_ticket_comments_client_visible",
+      "uq_organizations_country_tax_normalized"
+    ],
+    "expressionIndexes": [
+      "idx_app_users_primary_email_lower",
+      "idx_leads_email_lower"
+    ]
+  },
+  "drizzleParity": {
+    "snapshot": "C:\\Users\\leopa\\OneDrive\\Documentos\\Proyectos\\IlvoxB\\drizzle\\migrations\\meta\\0000_snapshot.json",
+    "tablesCompared": 19,
+    "columnsCompared": 199,
+    "structuralDifferences": [],
+    "foreignKeysCompared": 43,
+    "foreignKeyNameDifferences": [
+      {
+        "table": "audit_events",
+        "expectedByDrizzle": "audit_events_actor_user_id_app_users_id_fk",
+        "actualFromSql": "audit_events_actor_user_id_fkey"
+      },
+      {
+        "table": "audit_events",
+        "expectedByDrizzle": "audit_events_organization_id_organizations_id_fk",
+        "actualFromSql": "audit_events_organization_id_fkey"
+      },
+      {
+        "table": "files",
+        "expectedByDrizzle": "files_organization_id_organizations_id_fk",
+        "actualFromSql": "files_organization_id_fkey"
+      },
+      {
+        "table": "files",
+        "expectedByDrizzle": "files_uploaded_by_user_id_app_users_id_fk",
+        "actualFromSql": "files_uploaded_by_user_id_fkey"
+      },
+      {
+        "table": "leads",
+        "expectedByDrizzle": "leads_service_id_services_id_fk",
+        "actualFromSql": "leads_service_id_fkey"
+      },
+      {
+        "table": "leads",
+        "expectedByDrizzle": "leads_assigned_to_user_id_app_users_id_fk",
+        "actualFromSql": "leads_assigned_to_user_id_fkey"
+      },
+      {
+        "table": "leads",
+        "expectedByDrizzle": "leads_converted_organization_id_organizations_id_fk",
+        "actualFromSql": "leads_converted_organization_id_fkey"
+      },
+      {
+        "table": "organization_memberships",
+        "expectedByDrizzle": "organization_memberships_organization_id_organizations_id_fk",
+        "actualFromSql": "organization_memberships_organization_id_fkey"
+      },
+      {
+        "table": "organization_memberships",
+        "expectedByDrizzle": "organization_memberships_user_id_app_users_id_fk",
+        "actualFromSql": "organization_memberships_user_id_fkey"
+      },
+      {
+        "table": "organizations",
+        "expectedByDrizzle": "organizations_account_manager_user_id_app_users_id_fk",
+        "actualFromSql": "organizations_account_manager_user_id_fkey"
+      },
+      {
+        "table": "deliverables",
+        "expectedByDrizzle": "deliverables_approved_by_user_id_app_users_id_fk",
+        "actualFromSql": "deliverables_approved_by_user_id_fkey"
+      },
+      {
+        "table": "project_members",
+        "expectedByDrizzle": "project_members_user_id_app_users_id_fk",
+        "actualFromSql": "project_members_user_id_fkey"
+      },
+      {
+        "table": "project_members",
+        "expectedByDrizzle": "project_members_assigned_by_user_id_app_users_id_fk",
+        "actualFromSql": "project_members_assigned_by_user_id_fkey"
+      },
+      {
+        "table": "projects",
+        "expectedByDrizzle": "projects_organization_id_organizations_id_fk",
+        "actualFromSql": "projects_organization_id_fkey"
+      },
+      {
+        "table": "projects",
+        "expectedByDrizzle": "projects_service_id_services_id_fk",
+        "actualFromSql": "projects_service_id_fkey"
+      },
+      {
+        "table": "projects",
+        "expectedByDrizzle": "projects_lead_user_id_app_users_id_fk",
+        "actualFromSql": "projects_lead_user_id_fkey"
+      },
+      {
+        "table": "projects",
+        "expectedByDrizzle": "projects_created_by_user_id_app_users_id_fk",
+        "actualFromSql": "projects_created_by_user_id_fkey"
+      },
+      {
+        "table": "role_permissions",
+        "expectedByDrizzle": "role_permissions_role_id_roles_id_fk",
+        "actualFromSql": "role_permissions_role_id_fkey"
+      },
+      {
+        "table": "role_permissions",
+        "expectedByDrizzle": "role_permissions_permission_id_permissions_id_fk",
+        "actualFromSql": "role_permissions_permission_id_fkey"
+      },
+      {
+        "table": "user_roles",
+        "expectedByDrizzle": "user_roles_user_id_app_users_id_fk",
+        "actualFromSql": "user_roles_user_id_fkey"
+      },
+      {
+        "table": "user_roles",
+        "expectedByDrizzle": "user_roles_assigned_by_user_id_app_users_id_fk",
+        "actualFromSql": "user_roles_assigned_by_user_id_fkey"
+      },
+      {
+        "table": "tasks",
+        "expectedByDrizzle": "tasks_organization_id_organizations_id_fk",
+        "actualFromSql": "tasks_organization_id_fkey"
+      },
+      {
+        "table": "tasks",
+        "expectedByDrizzle": "tasks_assigned_to_user_id_app_users_id_fk",
+        "actualFromSql": "tasks_assigned_to_user_id_fkey"
+      },
+      {
+        "table": "tasks",
+        "expectedByDrizzle": "tasks_created_by_user_id_app_users_id_fk",
+        "actualFromSql": "tasks_created_by_user_id_fkey"
+      },
+      {
+        "table": "ticket_comments",
+        "expectedByDrizzle": "ticket_comments_author_user_id_app_users_id_fk",
+        "actualFromSql": "ticket_comments_author_user_id_fkey"
+      },
+      {
+        "table": "tickets",
+        "expectedByDrizzle": "tickets_organization_id_organizations_id_fk",
+        "actualFromSql": "tickets_organization_id_fkey"
+      },
+      {
+        "table": "tickets",
+        "expectedByDrizzle": "tickets_requester_user_id_app_users_id_fk",
+        "actualFromSql": "tickets_requester_user_id_fkey"
+      },
+      {
+        "table": "tickets",
+        "expectedByDrizzle": "tickets_assigned_to_user_id_app_users_id_fk",
+        "actualFromSql": "tickets_assigned_to_user_id_fkey"
+      }
+    ],
+    "uniqueConstraintsCompared": 15,
+    "uniqueNameDifferences": [
+      {
+        "table": "app_users",
+        "expectedByDrizzle": "app_users_clerk_user_id_unique",
+        "actualFromSql": "app_users_clerk_user_id_key"
+      },
+      {
+        "table": "identity_webhook_events",
+        "expectedByDrizzle": "identity_webhook_events_clerk_event_id_unique",
+        "actualFromSql": "identity_webhook_events_clerk_event_id_key"
+      },
+      {
+        "table": "permissions",
+        "expectedByDrizzle": "permissions_code_unique",
+        "actualFromSql": "permissions_code_key"
+      },
+      {
+        "table": "services",
+        "expectedByDrizzle": "services_name_unique",
+        "actualFromSql": "services_name_key"
+      }
+    ],
+    "checkNamesMatch": true,
+    "indexesCompared": 53,
+    "explicitIndexNamesMatch": true,
+    "result": "structural_match_with_name_drift"
+  },
+  "seed": {
+    "roles": 11,
+    "permissions": 23,
+    "associations": 142,
+    "distinct_associations": 142,
+    "unknown_roles": 0,
+    "unknown_permissions": 0,
+    "roles_without_permissions": 0,
+    "permissions_without_roles": 0,
+    "duplicates": 0,
+    "result": "passed"
+  },
+  "checks": {
+    "total": 55,
+    "passed": 55,
+    "failed": 0,
+    "results": [
+      {
+        "constraint": "chk_app_users_clerk_user_id_not_blank",
+        "table": "app_users",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_app_users_clerk_user_id_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_app_users_primary_email_not_blank",
+        "table": "app_users",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_app_users_primary_email_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_app_users_status",
+        "table": "app_users",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_app_users_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_roles_scope",
+        "table": "roles",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_roles_scope",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_roles_code_not_blank",
+        "table": "roles",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_roles_code_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_roles_name_not_blank",
+        "table": "roles",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_roles_name_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_permissions_code_not_blank",
+        "table": "permissions",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_permissions_code_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_permissions_module_not_blank",
+        "table": "permissions",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_permissions_module_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_permissions_name_not_blank",
+        "table": "permissions",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_permissions_name_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_user_roles_global_scope",
+        "table": "user_roles",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_user_roles_global_scope",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_identity_webhook_events_status",
+        "table": "identity_webhook_events",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_identity_webhook_events_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_identity_webhook_events_attempt_count",
+        "table": "identity_webhook_events",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_identity_webhook_events_attempt_count",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_identity_webhook_events_processed_at",
+        "table": "identity_webhook_events",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_identity_webhook_events_processed_at",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_organizations_name_not_blank",
+        "table": "organizations",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_organizations_name_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_organizations_size",
+        "table": "organizations",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_organizations_size",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_organizations_status",
+        "table": "organizations",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_organizations_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_organizations_country_code",
+        "table": "organizations",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_organizations_country_code",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_organizations_tax_fields",
+        "table": "organizations",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_organizations_tax_fields",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_organization_memberships_scope",
+        "table": "organization_memberships",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_organization_memberships_scope",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_organization_memberships_status",
+        "table": "organization_memberships",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_organization_memberships_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_organization_memberships_timestamps",
+        "table": "organization_memberships",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_organization_memberships_timestamps",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_services_category",
+        "table": "services",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_services_category",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_leads_source",
+        "table": "leads",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_leads_source",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_leads_status",
+        "table": "leads",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_leads_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_leads_conversion",
+        "table": "leads",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_leads_conversion",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_projects_status",
+        "table": "projects",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_projects_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_projects_priority",
+        "table": "projects",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_projects_priority",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_projects_dates",
+        "table": "projects",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_projects_dates",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_project_members_scope",
+        "table": "project_members",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_project_members_scope",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_project_milestones_status",
+        "table": "project_milestones",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_project_milestones_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_project_milestones_completed_at",
+        "table": "project_milestones",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_project_milestones_completed_at",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_deliverables_status",
+        "table": "deliverables",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_deliverables_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_deliverables_approval",
+        "table": "deliverables",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_deliverables_approval",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tickets_ticket_year",
+        "table": "tickets",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tickets_ticket_year",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tickets_type",
+        "table": "tickets",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tickets_type",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tickets_requested_priority",
+        "table": "tickets",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tickets_requested_priority",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tickets_priority",
+        "table": "tickets",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tickets_priority",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tickets_status",
+        "table": "tickets",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tickets_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tickets_resolution",
+        "table": "tickets",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tickets_resolution",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tickets_closed_at",
+        "table": "tickets",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tickets_closed_at",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_ticket_comments_visibility",
+        "table": "ticket_comments",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_ticket_comments_visibility",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_ticket_comments_content",
+        "table": "ticket_comments",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_ticket_comments_content",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tasks_priority",
+        "table": "tasks",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tasks_priority",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tasks_status",
+        "table": "tasks",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tasks_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tasks_estimated_minutes",
+        "table": "tasks",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tasks_estimated_minutes",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tasks_single_context",
+        "table": "tasks",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tasks_single_context",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_tasks_context_organization",
+        "table": "tasks",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_tasks_context_organization",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_files_object_key_not_blank",
+        "table": "files",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_files_object_key_not_blank",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_files_size_bytes",
+        "table": "files",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_files_size_bytes",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_files_checksum_sha256",
+        "table": "files",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_files_checksum_sha256",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_files_classification",
+        "table": "files",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_files_classification",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_files_status",
+        "table": "files",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_files_status",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_files_single_parent",
+        "table": "files",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_files_single_parent",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_audit_events_old_values_object",
+        "table": "audit_events",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_audit_events_old_values_object",
+        "errorCode": "23514",
+        "result": "passed"
+      },
+      {
+        "constraint": "chk_audit_events_new_values_object",
+        "table": "audit_events",
+        "validCase": "accepted",
+        "invalidCase": "rejected",
+        "actualConstraint": "chk_audit_events_new_values_object",
+        "errorCode": "23514",
+        "result": "passed"
+      }
+    ]
+  },
+  "foreignKeys": {
+    "total": 43,
+    "passed": 43,
+    "failed": 0,
+    "restrictCount": 41,
+    "cascadeCount": 2,
+    "results": [
+      {
+        "constraint": "audit_events_actor_user_id_fkey",
+        "table": "audit_events",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "audit_events_actor_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "audit_events_organization_id_fkey",
+        "table": "audit_events",
+        "parentTable": "organizations",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "audit_events_organization_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "organization_memberships_organization_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "files_organization_id_fkey",
+        "table": "files",
+        "parentTable": "organizations",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "files_organization_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "organization_memberships_organization_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "files_uploaded_by_user_id_fkey",
+        "table": "files",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "files_uploaded_by_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_files_project",
+        "table": "files",
+        "parentTable": "projects",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_files_project",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_project_members_project",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_files_ticket",
+        "table": "files",
+        "parentTable": "tickets",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_files_ticket",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_ticket_comments_ticket",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_files_ticket_comment",
+        "table": "files",
+        "parentTable": "ticket_comments",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_files_ticket_comment",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_files_ticket_comment",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_files_task",
+        "table": "files",
+        "parentTable": "tasks",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_files_task",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_files_task",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_files_deliverable",
+        "table": "files",
+        "parentTable": "deliverables",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_files_deliverable",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_files_deliverable",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "leads_service_id_fkey",
+        "table": "leads",
+        "parentTable": "services",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "leads_service_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "leads_service_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "leads_assigned_to_user_id_fkey",
+        "table": "leads",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "leads_assigned_to_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "leads_converted_organization_id_fkey",
+        "table": "leads",
+        "parentTable": "organizations",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "leads_converted_organization_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "organization_memberships_organization_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "organization_memberships_organization_id_fkey",
+        "table": "organization_memberships",
+        "parentTable": "organizations",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "organization_memberships_organization_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "organization_memberships_organization_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "organization_memberships_user_id_fkey",
+        "table": "organization_memberships",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "organization_memberships_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_organization_memberships_organization_role",
+        "table": "organization_memberships",
+        "parentTable": "roles",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_organization_memberships_organization_role",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_organization_memberships_organization_role",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "organizations_account_manager_user_id_fkey",
+        "table": "organizations",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "organizations_account_manager_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "deliverables_approved_by_user_id_fkey",
+        "table": "deliverables",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "deliverables_approved_by_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_deliverables_project",
+        "table": "deliverables",
+        "parentTable": "projects",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_deliverables_project",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_project_members_project",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "project_members_user_id_fkey",
+        "table": "project_members",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "project_members_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "project_members_assigned_by_user_id_fkey",
+        "table": "project_members",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "project_members_assigned_by_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_assigned_by_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_project_members_project",
+        "table": "project_members",
+        "parentTable": "projects",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_project_members_project",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_project_members_project",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_project_members_project_role",
+        "table": "project_members",
+        "parentTable": "roles",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_project_members_project_role",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_project_members_project_role",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_project_milestones_project",
+        "table": "project_milestones",
+        "parentTable": "projects",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_project_milestones_project",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_project_members_project",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "projects_organization_id_fkey",
+        "table": "projects",
+        "parentTable": "organizations",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "projects_organization_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "organization_memberships_organization_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "projects_service_id_fkey",
+        "table": "projects",
+        "parentTable": "services",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "projects_service_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "leads_service_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "projects_lead_user_id_fkey",
+        "table": "projects",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "projects_lead_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "projects_created_by_user_id_fkey",
+        "table": "projects",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "projects_created_by_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "role_permissions_role_id_fkey",
+        "table": "role_permissions",
+        "parentTable": "roles",
+        "onDelete": "CASCADE",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "role_permissions_role_id_fkey",
+        "deleteBehavior": "not_tested",
+        "deleteErrorCode": null,
+        "deleteBlockingConstraint": null,
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "role_permissions_permission_id_fkey",
+        "table": "role_permissions",
+        "parentTable": "permissions",
+        "onDelete": "CASCADE",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "role_permissions_permission_id_fkey",
+        "deleteBehavior": "not_tested",
+        "deleteErrorCode": null,
+        "deleteBlockingConstraint": null,
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "user_roles_user_id_fkey",
+        "table": "user_roles",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "user_roles_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "user_roles_assigned_by_user_id_fkey",
+        "table": "user_roles",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "user_roles_assigned_by_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_assigned_by_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_user_roles_global_role",
+        "table": "user_roles",
+        "parentTable": "roles",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_user_roles_global_role",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_user_roles_global_role",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "tasks_organization_id_fkey",
+        "table": "tasks",
+        "parentTable": "organizations",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "tasks_organization_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "organization_memberships_organization_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "tasks_assigned_to_user_id_fkey",
+        "table": "tasks",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "tasks_assigned_to_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "tasks_created_by_user_id_fkey",
+        "table": "tasks",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "tasks_created_by_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_tasks_project",
+        "table": "tasks",
+        "parentTable": "projects",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_tasks_project",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_project_members_project",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_tasks_ticket",
+        "table": "tasks",
+        "parentTable": "tickets",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_tasks_ticket",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_ticket_comments_ticket",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "ticket_comments_author_user_id_fkey",
+        "table": "ticket_comments",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "ticket_comments_author_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_ticket_comments_ticket",
+        "table": "ticket_comments",
+        "parentTable": "tickets",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_ticket_comments_ticket",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_ticket_comments_ticket",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "tickets_organization_id_fkey",
+        "table": "tickets",
+        "parentTable": "organizations",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "tickets_organization_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "organization_memberships_organization_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "tickets_requester_user_id_fkey",
+        "table": "tickets",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "tickets_requester_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "tickets_assigned_to_user_id_fkey",
+        "table": "tickets",
+        "parentTable": "app_users",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "tickets_assigned_to_user_id_fkey",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "user_roles_assigned_by_user_id_fkey",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      },
+      {
+        "constraint": "fk_tickets_project",
+        "table": "tickets",
+        "parentTable": "projects",
+        "onDelete": "RESTRICT",
+        "onUpdate": "NO ACTION",
+        "existingReference": "accepted",
+        "missingReference": "rejected",
+        "missingReferenceConstraint": "fk_tickets_project",
+        "deleteBehavior": "restricted",
+        "deleteErrorCode": "23001",
+        "deleteBlockingConstraint": "fk_project_members_project",
+        "updateBehavior": "no_action_rejected",
+        "result": "passed"
+      }
+    ],
+    "cascadeResults": [
+      {
+        "constraint": "role_permissions_role_id_fkey",
+        "childRowsAfterDelete": 0,
+        "unrelatedParentRowsAfterDelete": 1,
+        "result": "passed"
+      },
+      {
+        "constraint": "role_permissions_permission_id_fkey",
+        "childRowsAfterDelete": 0,
+        "unrelatedParentRowsAfterDelete": 1,
+        "result": "passed"
+      }
+    ]
+  },
+  "identityAndGenerated": {
+    "small": {
+      "ticket_number": "1",
+      "ticket_year": 2026,
+      "code": "TCK-2026-000001"
+    },
+    "sixDigits": {
+      "ticket_number": "100000",
+      "ticket_year": 2026,
+      "code": "TCK-2026-100000"
+    },
+    "overSixDigits": {
+      "ticket_number": "1000001",
+      "ticket_year": 2026,
+      "code": "TCK-2026-1000001"
+    },
+    "incrementAfterOverSix": {
+      "ticket_number": "1000002",
+      "ticket_year": 2028,
+      "code": "TCK-2028-1000002"
+    },
+    "manualValueError": "428C9",
+    "updatedSourceCode": "TCK-2027-000001",
+    "result": "passed"
+  },
+  "rollback": {
+    "insert": true,
+    "update": true,
+    "delete": true,
+    "multiTable": true,
+    "result": "passed"
+  },
+  "residualTestRowsBeforeSchemaDrop": 0,
+  "cleanup": {
+    "attempted": true,
+    "removed": true,
+    "residualSchemaCount": 0
+  }
+}
