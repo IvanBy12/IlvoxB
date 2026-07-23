@@ -2,6 +2,7 @@ import type { FastifyPluginCallback } from "fastify";
 import { AppError } from "../../common/errors/app-error.js";
 import { ErrorCode } from "../../common/errors/error-codes.js";
 import { successResponse } from "../../common/http/api-response.js";
+import { describeClerkWebhookFailure } from "./clerk-webhook-error.js";
 import type { ClerkWebhookProcessor, ClerkWebhookVerifier } from "./clerk-webhook.types.js";
 
 export interface ClerkWebhookRoutesOptions {
@@ -35,7 +36,19 @@ export const clerkWebhookRoutes: FastifyPluginCallback<ClerkWebhookRoutesOptions
     try {
       const result = await options.service.process(eventId, rawBody, event);
       return successResponse(result);
-    } catch {
+    } catch (error) {
+      const failure = describeClerkWebhookFailure(error);
+      request.log.error(
+        {
+          err: failure.err,
+          requestId: request.id,
+          eventId,
+          eventType: event.type,
+          classification: failure.classification,
+          databaseError: failure.databaseError,
+        },
+        "Clerk webhook processing failed",
+      );
       return reply.status(503).send({
         error: { code: ErrorCode.DatabaseUnavailable, message: "Webhook processing unavailable", requestId: request.id },
       });

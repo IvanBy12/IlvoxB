@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import pg from "pg";
+import "dotenv/config";
 
 const sqlPath = process.argv[2];
 
@@ -72,5 +74,46 @@ if (!sqlPath) {
     unknownReferences,
   };
 
-  console.log(JSON.stringify(result, null, 2));
+  const connectionString = process.env.DATABASE_URL;
+  if (connectionString === undefined || connectionString.trim() === "") {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    const client = new pg.Client({ connectionString });
+    let currentDatabase;
+    try {
+      await client.connect();
+      await client.query("BEGIN READ ONLY");
+      currentDatabase = (await client.query(`
+        SELECT
+          (SELECT count(*)::integer FROM information_schema.tables
+           WHERE table_schema='public' AND table_type='BASE TABLE') AS tables,
+          (SELECT count(*)::integer FROM information_schema.columns
+           WHERE table_schema='public') AS columns,
+          (SELECT count(*)::integer FROM pg_constraint c JOIN pg_namespace n
+           ON n.oid=c.connamespace WHERE n.nspname='public' AND c.contype='f') AS foreign_keys,
+          (SELECT count(*)::integer FROM pg_constraint c JOIN pg_namespace n
+           ON n.oid=c.connamespace WHERE n.nspname='public' AND c.contype='c') AS checks,
+          (SELECT count(*)::integer FROM pg_constraint c JOIN pg_namespace n
+           ON n.oid=c.connamespace WHERE n.nspname='public' AND c.contype='u') AS unique_constraints,
+          (SELECT count(*)::integer FROM pg_indexes
+           WHERE schemaname='public' AND indexname NOT LIKE '%_pkey'
+             AND indexname NOT IN (
+               SELECT conname FROM pg_constraint c JOIN pg_namespace n
+               ON n.oid=c.connamespace WHERE n.nspname='public' AND c.contype='u'
+             )) AS explicit_indexes
+      `)).rows[0];
+      await client.query("ROLLBACK");
+    } finally {
+      await client.end().catch(() => undefined);
+    }
+    const currentOk =
+      currentDatabase.tables === 19 &&
+      currentDatabase.columns === 204 &&
+      currentDatabase.foreign_keys === 43 &&
+      currentDatabase.checks === 57 &&
+      currentDatabase.unique_constraints === 15 &&
+      currentDatabase.explicit_indexes === 54;
+    console.log(JSON.stringify({ sourceSql: result, currentDatabase, currentOk }, null, 2));
+    if (!currentOk) process.exitCode = 1;
+  }
 }

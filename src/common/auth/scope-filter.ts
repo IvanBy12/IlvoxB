@@ -29,7 +29,9 @@ export function buildScopeFilter(scope: AuthorizedRepositoryScope, columns: Scop
 
   const actorColumn = scope.kind === "own" ? columns.ownerId : columns.assigneeId;
   if (actorColumn === undefined) return falsePredicate;
-  return and(organization, eq(actorColumn as never, scope.actorId)) ?? falsePredicate;
+  const actor = eq(actorColumn as never, scope.actorId);
+  if (columns.organizationId === undefined) return actor;
+  return and(organization, actor) ?? falsePredicate;
 }
 
 export function combineScopeWithResourceAccess(

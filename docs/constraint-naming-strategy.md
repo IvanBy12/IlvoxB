@@ -45,4 +45,4 @@ Antes de `DROP CONSTRAINT`, comprobar tabla, columnas, destino y acciones. Para 
 - 15 UNIQUE y cero índices físicos equivalentes duplicados;
 - “No schema changes” tras alinear snapshot/modelo.
 
-PostgreSQL 16 continúa pendiente; la evidencia runtime actual es PostgreSQL 18.4.
+PostgreSQL 18.4 es la evidencia runtime oficial dentro de la familia soportada PostgreSQL 18.x. PostgreSQL 16 queda como compatibilidad no evaluada y no bloqueante.

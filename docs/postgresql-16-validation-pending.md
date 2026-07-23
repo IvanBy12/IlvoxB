@@ -1,16 +1,19 @@
-# PostgreSQL 16 — validación pendiente
+# PostgreSQL 16 — compatibilidad no evaluada (historial)
 
-Estado: pendiente y bloqueante para compatibilidad oficial/producción; no bloquea el cierre de implementación de Fase 3.
+Fecha de actualización: 22 de julio de 2026.
+Estado: **no probado, no soportado oficialmente y no bloqueante**.
 
-Esta ejecución no instaló PostgreSQL, Docker ni Podman y no determinó la versión del servidor configurado como PostgreSQL 16. Por tanto, no se afirma compatibilidad oficial.
+Este documento conserva el historial de la decisión anterior que trataba PostgreSQL 16 como versión objetivo. Esa decisión fue sustituida por `postgresql-version-policy.md`:
 
-Antes de promover las migraciones se debe usar una instancia PostgreSQL 16 aislada para:
+- PostgreSQL 18.x es la familia oficial.
+- PostgreSQL 18.4 es la versión validada.
+- PostgreSQL 16 no fue ejecutado ni validado.
+- No se afirma compatibilidad con PostgreSQL 16.
+- Su ausencia no bloquea Fase 3.5, Fase 4 ni producción dentro de PostgreSQL 18.x.
+- No se debe instalar PostgreSQL 16 ni solicitar `TEST_DATABASE_URL` para esa versión bajo la política vigente.
 
-1. aplicar la baseline exacta y verificar su hash;
-2. aplicar `0001`, `0002` y `0003` transaccionalmente;
-3. ejecutar catálogo, RBAC y toda la suite con DB;
-4. probar rollbacks en orden inverso;
-5. confirmar planes del índice de archivos y locks concurrentes;
-6. eliminar los recursos temporales y registrar versión exacta del servidor.
+El hash de la baseline observado durante el intento histórico fue:
 
-Solo después debe autorizarse una ventana separada de migración sobre producción. `drizzle-kit push` no forma parte de ese procedimiento.
+`46D9EDDF29A0ABC25091E43867D0AC6B11A1AE180BDDF12665254BE9CD178CD6`
+
+Si una decisión futura selecciona PostgreSQL 16 o cualquier versión fuera de 18.x, deberá abrirse una validación nueva y específica: baseline, catálogo, tres migraciones, suite DB, rollbacks, comparación con 18.4 y limpieza. Hasta entonces PostgreSQL 16 permanece simplemente como compatibilidad desconocida.

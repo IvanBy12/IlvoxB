@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import pg from "pg";
+import "dotenv/config";
 
 const sqlPath = process.argv[2];
 
@@ -195,6 +197,74 @@ if (!sqlPath) {
       );
     }
   } else {
-    console.log(JSON.stringify(summary, null, 2));
+    const connectionString = process.env.DATABASE_URL;
+    if (connectionString === undefined || connectionString.trim() === "") {
+      console.log(JSON.stringify(summary, null, 2));
+    } else {
+      const client = new pg.Client({ connectionString });
+      let currentDatabase;
+      try {
+        await client.connect();
+        await client.query("BEGIN READ ONLY");
+        currentDatabase = (await client.query(`
+          SELECT
+            (SELECT count(*)::integer FROM roles) AS roles,
+            (SELECT count(*)::integer FROM permissions) AS permissions,
+            (SELECT count(*)::integer FROM role_permissions) AS associations,
+            (SELECT count(*)::integer FROM (
+              SELECT DISTINCT role_id, permission_id FROM role_permissions
+            ) d) AS distinct_associations,
+            (SELECT count(*)::integer FROM (
+              SELECT role_id, permission_id FROM role_permissions
+              GROUP BY role_id, permission_id HAVING count(*) > 1
+            ) d) AS duplicate_associations,
+            (SELECT count(*)::integer FROM role_permissions rp
+             LEFT JOIN roles r ON r.id=rp.role_id
+             LEFT JOIN permissions p ON p.id=rp.permission_id
+             WHERE r.id IS NULL OR p.id IS NULL) AS orphan_associations,
+            (SELECT count(*)::integer FROM role_permissions rp
+             JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id
+             WHERE p.code='services.manage' AND r.scope='global'
+               AND r.code IN ('super_admin','admin')) AS services_manage_targets,
+            (SELECT count(*)::integer FROM role_permissions rp
+             JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id
+             WHERE p.code='services.manage'
+               AND NOT (r.scope='global' AND r.code IN ('super_admin','admin')))
+               AS services_manage_leaks,
+            (SELECT count(*)::integer FROM role_permissions rp
+             JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id
+             WHERE p.code IN (
+               'permissions.manage','roles.assign_super_admin','security.manage',
+               'system.configure','organizations.access_all'
+             ) AND r.scope='global' AND r.code='super_admin') AS sensitive_targets,
+            (SELECT count(*)::integer FROM role_permissions rp
+             JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id
+             WHERE p.code IN (
+               'permissions.manage','roles.assign_super_admin','security.manage',
+               'system.configure','organizations.access_all'
+             ) AND NOT (r.scope='global' AND r.code='super_admin')) AS sensitive_leaks
+        `)).rows[0];
+        await client.query("ROLLBACK");
+      } finally {
+        await client.end().catch(() => undefined);
+      }
+      const currentOk =
+        currentDatabase.roles === 11 &&
+        currentDatabase.permissions === 37 &&
+        currentDatabase.associations === 159 &&
+        currentDatabase.distinct_associations === 159 &&
+        currentDatabase.duplicate_associations === 0 &&
+        currentDatabase.orphan_associations === 0 &&
+        currentDatabase.services_manage_targets === 2 &&
+        currentDatabase.services_manage_leaks === 0 &&
+        currentDatabase.sensitive_targets === 5 &&
+        currentDatabase.sensitive_leaks === 0;
+      console.log(JSON.stringify({
+        sourceBaseline: summary,
+        currentDatabase,
+        currentOk,
+      }, null, 2));
+      if (!currentOk) process.exitCode = 1;
+    }
   }
 }

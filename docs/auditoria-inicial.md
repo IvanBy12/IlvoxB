@@ -10,7 +10,7 @@ Estado del entregable: auditoría y plan; sin implementación y sin modificacion
 - SQL: 1.176 líneas, 19 tablas, 53 índices, 43 referencias foráneas, 55 restricciones `CHECK`, 11 roles, 23 permisos y 142 asociaciones rol-permiso.
 - Backend: el repositorio solo contenía `README.md`, `LICENSE` y archivos de Git; no existe todavía una aplicación ejecutable.
 - Se ejecutó `tsc --noEmit` sobre el frontend. Falló por falta de los tipos de `import.meta.env` y de la declaración para importar PNG. No se modificó el frontend.
-- No hay `psql`, Docker ni una instancia PostgreSQL suministrada en este entorno. La validación SQL de esta fase es estática; la ejecución real del script en PostgreSQL 16 limpio queda como criterio obligatorio de la fase de implementación.
+- Nota histórica: en esta auditoría no había `psql`, Docker ni una instancia PostgreSQL suministrada y se propuso PostgreSQL 16 como criterio posterior. Esa condición fue sustituida: PostgreSQL 18.x es oficial y 18.4 quedó validado en runtime.
 - Los textos públicos de marketing se clasifican como contenido visual mientras no se confirme que deban administrarse desde el backend.
 
 ## 1. Resumen ejecutivo
@@ -213,7 +213,7 @@ Problemas técnicos actuales del frontend que no se corrigen en esta fase:
 | Ticket interno | resolver/transicionar | estado y solución | selector sin restricciones | `tickets`, `audit_events` | transición válida, resolución obligatoria | `POST /api/v1/tickets/:id/transitions` | `tickets.change_status/resolve/close` |
 | Administración/usuarios | listar | perfil, rol, estado | `usuarios` | usuarios y RBAC | solo administración | `GET /api/v1/admin/users` | `users.manage` |
 | Administración/RBAC | consultar/asignar | matriz rol-permiso | `matrizRoles` estática | tablas RBAC | roles sembrados; asignaciones auditadas | `GET /api/v1/admin/roles`; `PUT .../role-assignments` | `roles.manage` |
-| Administración/servicios | listar/gestionar | servicio y visibilidad | `servicios` | `services` | falta permiso `services.manage` | `/api/v1/admin/services` | nuevo permiso requerido |
+| Administración/servicios | listar/gestionar | servicio y visibilidad | `servicios` | `services` | `services.manage` versionado en 0005 | `/api/v1/admin/services` | resuelto en Fase 4.5 |
 | Auditoría | listar/filtrar | actor, acción, entidad, detalle | `auditoria` | `audit_events`, usuarios | no exponer secretos; solo lectura | `GET /api/v1/audit-events` | `audit.read` |
 | Notificaciones internas | listar/marcar | bandeja y no leídas | `notificaciones` | sin soporte | propiedad del usuario | `/api/v1/me/notifications` | Migración requerida |
 | Portal/Dashboard | consultar | proyectos, tickets, entregables | filtros locales por `clienteId` | organizaciones, proyectos, entregables, tickets | membresía activa y alcance org | `GET /api/v1/dashboard/portal` | rol de organización |
@@ -332,7 +332,7 @@ Convención propuesta: prefijo `/api/v1`, JSON `{ "data": ... }`, metadatos de p
 | `PUT /api/v1/admin/users/:id/roles/:roleId` | asignar rol global | `roles.manage` | `assigned_by`, auditoría |
 | `DELETE /api/v1/admin/users/:id/roles/:roleId` | revocar rol global | `roles.manage` | guardas de seguridad |
 | `GET /api/v1/admin/services` | catálogo completo | `services.read` | internos |
-| `POST/PATCH /api/v1/admin/services[/:id]` | gestionar catálogo | permiso nuevo `services.manage` | requiere migración de seed RBAC |
+| `POST/PATCH /api/v1/admin/services[/:id]` | gestionar catálogo | `services.manage` | implementado y migración 0005 validada |
 
 ### Proyectos y tareas
 
@@ -413,7 +413,7 @@ Convención propuesta: prefijo `/api/v1`, JSON `{ "data": ... }`, metadatos de p
 10. **No hay último acceso.** La UI lo muestra, pero SQL solo registra sincronización. Recomendación: `last_login_at` si el dato sigue siendo requisito. Migración: sí.
 11. **Listados sin paginación real.** Todos los datos se descargan y filtran localmente. Recomendación: cursores o página/tamaño con límites; índices adicionales se validarán con `EXPLAIN`. Migración: quizá índices.
 12. **Auditoría puede capturar datos sensibles.** `old_values/new_values` es flexible. Recomendación: lista permitida y redacción antes de persistir. Migración: no.
-13. **No se ha ejecutado el SQL en PostgreSQL 16.** La revisión estática indica orden y sintaxis plausibles, pero la compatibilidad final requiere base limpia y pruebas de restricciones. Migración: no.
+13. **No se ejecutó el SQL en PostgreSQL 16.** Es un dato histórico y no implica compatibilidad. La validación runtime oficial se completó después en PostgreSQL 18.4. Migración: no.
 
 ### Bajos
 
@@ -485,7 +485,7 @@ Decisiones arquitectónicas:
 ### Fase 0 — decisiones y validación de base
 
 - Aprobar alcance MVP y resolver las brechas altas.
-- Ejecutar el SQL original, sin editar, en PostgreSQL 16 limpio.
+- Criterio histórico sustituido: ejecutar el SQL original en la versión objetivo. La ejecución se completó posteriormente en PostgreSQL 18.4, ahora versión oficial validada.
 - Probar todos los `CHECK`, FK, índices únicos, semilla y rollback transaccional.
 - Revisar y aprobar las 142 asociaciones RBAC.
 - Criterio: acta de decisiones y baseline reproducible con checksum.

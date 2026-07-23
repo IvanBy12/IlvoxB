@@ -1,7 +1,7 @@
 # Paridad PostgreSQL, SQL original y Drizzle
 
 Fecha: 2026-07-22  
-Estado: comparación estática y catálogo real completados en PostgreSQL 18.4; PostgreSQL 16 pendiente.  
+Estado: comparación estática y catálogo real completados en PostgreSQL 18.4, runtime oficial de PostgreSQL 18.x.
 Fuente de verdad: `C:\Users\leopa\Downloads\ilvox_complete_reconstructed.sql`.
 
 ## Baseline preservada
@@ -90,7 +90,7 @@ Estos elementos permanecen en la copia exacta de la baseline. La expresión de `
 
 ## Escenario A: base nueva
 
-Precondiciones: PostgreSQL 16, base dedicada vacía, permiso para `pgcrypto`, checksum verificado y credenciales que no apunten a producción.
+Precondiciones: PostgreSQL 18.x, base dedicada vacía, permiso para `pgcrypto`, checksum verificado y credenciales que no apunten a producción. Otra versión exige una validación específica previa.
 
 1. Verificar el checksum de `drizzle/baseline/0000_ilvox_complete_reconstructed.sql`.
 2. Crear una base vacía con nombre explícito.
@@ -172,6 +172,48 @@ npm run audit:rbac -- C:\ruta\ilvox_complete_reconstructed.sql
 
 ## Pendiente
 
-- Ejecutar el SQL en PostgreSQL 16 real.
+- Mantener staging y producción en PostgreSQL 18.x; revalidar completamente antes de adoptar otra versión.
 - Mantener la auditoría exacta de nombres con `npm run audit:constraint-names` antes de futuras migraciones.
 - Recalcular y registrar evidencia de baseline en cada entorno real antes de habilitar migraciones posteriores.
+
+## Estado tras la preintegración de Fase 3.5
+
+La baseline versionada volvió a producir el SHA-256 aprobado y las auditorías estáticas aprobaron. La paridad exportada mantiene 19 tablas y 43 referencias FK; reconoce como únicas diferencias esperadas de Fase 3 el índice `idx_files_organization_audience_active` y los checks `chk_files_audience` y `chk_identity_webhook_events_payload_sha256`.
+
+PostgreSQL 18.4 es la evidencia runtime oficial, con tiempo de baseline registrado de 230.97 ms. PostgreSQL 16 no fue probado ni está soportado oficialmente; su ausencia no es un gate. Esta decisión no autoriza reconocer/aplicar la baseline en una base principal sin completar el runbook y las aprobaciones correspondientes.
+
+## Estado tras Fase 4.5
+
+Las migraciones 0004–0005 se validaron sobre baseline + 0001–0003 en un schema temporal de
+PostgreSQL 18.x:
+
+- 19 tablas, 204 columnas, 43 FK, 57 checks, 15 unique y 54 índices explícitos;
+- 11 roles, 37 permisos y 159 asociaciones distintas;
+- `services.manage`: dos grants, cero grants no autorizados;
+- `chk_leads_conversion` conserva nombre y FK a organizaciones, permitiendo organización
+  nula únicamente cuando status es converted y converted_at existe;
+- rollback 0005 restauró 36/157;
+- rollback 0004 rechazó correctamente datos standalone y luego restauró el check antiguo
+  tras limpiar el fixture;
+- schema temporal eliminado y fingerprint de `public` sin cambios.
+
+El cambio de expresión del check está reflejado en el snapshot 0004. El snapshot custom 0005
+no cambia estructura porque esa migración modifica datos RBAC.
+
+## Estado persistente después del despliegue de Fase 4.5
+
+El 23 de julio de 2026 se aplicaron 0004 y 0005 sobre `GestionIlvox.public`, después de crear y
+verificar un backup custom. El catálogo persistente confirmó 19 tablas, 204 columnas, 43 FK,
+57 checks, 15 unique y 54 índices explícitos. RBAC confirmó 11 roles, 37 permisos y 159
+asociaciones distintas.
+
+`audit:constraint-names` ya no conserva los conteos históricos 19/199/55/23/142. Obtiene los
+nombres esperados de la exportación Drizzle, compara CHECK/FK/UNIQUE físicos y acepta
+explícitamente las variantes pre y post 0004 de `chk_leads_conversion`. Después del despliegue
+reportó fase `phase45`, cero faltantes, cero inesperados, cero índices duplicados y cero schemas
+temporales.
+
+Las auditorías SQL/RBAC conservan la lectura deliberada de la baseline histórica y, cuando
+existe `DATABASE_URL`, añaden una transacción read-only contra el estado vigente. El resultado
+final fue catálogo 19/204/43/57/15/54 y RBAC 11/37/159, sin duplicados, huérfanos ni leaks.
+0005 sigue siendo una migración de datos y no altera el SQL de baseline.

@@ -37,8 +37,8 @@ Partida: 23 permisos / 142 asociaciones. Objetivo: **36 / 157**. Se agregan 13 p
 1. Aprobación de producto, seguridad, backend y DBA.
 2. Decisión explícita sobre audiencia de archivos directos.
 3. Implementación y aprobación de pruebas Fase 3.
-4. Backup/restore probado y staging con PostgreSQL 16.
+4. Backup/restore probado y staging dentro de PostgreSQL 18.x; otra versión requiere revalidación específica.
 5. Conteos precondición 23/142 y poscondición 36/157; cero duplicados.
 6. Despliegue coordinado y plan de reversión.
 
-Recomendación: **aprobar condicionalmente el diseño** e iniciar Fase 3 de contratos/pruebas; no aprobar aún la aplicación del SQL hasta resolver el gate de archivos y completar PostgreSQL 16.
+Estado actualizado: el diseño y las pruebas de Fase 3 fueron aprobados sobre PostgreSQL 18.4. La aplicación sobre una base principal continúa sujeta al runbook, backup, preflight y aprobación humana; PostgreSQL 16 ya no es un gate.

@@ -18,6 +18,19 @@ import type { ClerkWebhookProcessor, ClerkWebhookVerifier } from "./modules/webh
 import { OfficialClerkWebhookVerifier } from "./modules/webhooks/clerk-webhook.verifier.js";
 import { ClerkWebhookService } from "./modules/webhooks/clerk-webhook.service.js";
 import { clerkWebhookRoutes } from "./modules/webhooks/clerk-webhook.routes.js";
+import { AuthorizationService } from "./common/auth/authorization.service.js";
+import type { ServiceCatalogRepository } from "./modules/services/service-catalog.types.js";
+import { PostgresServiceCatalogRepository } from "./modules/services/service-catalog.repository.js";
+import { ServiceCatalogService } from "./modules/services/service-catalog.service.js";
+import { serviceCatalogRoutes } from "./modules/services/service-catalog.routes.js";
+import type { LeadRepository } from "./modules/leads/lead.types.js";
+import { PostgresLeadRepository } from "./modules/leads/lead.repository.js";
+import { LeadService } from "./modules/leads/lead.service.js";
+import { leadRoutes } from "./modules/leads/lead.routes.js";
+import type { OrganizationRepository } from "./modules/organizations/organization.types.js";
+import { PostgresOrganizationRepository } from "./modules/organizations/organization.repository.js";
+import { OrganizationService } from "./modules/organizations/organization.service.js";
+import { organizationRoutes } from "./modules/organizations/organization.routes.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -26,6 +39,9 @@ export interface BuildAppOptions {
   readonly identityRepository?: IdentityRepository;
   readonly webhookVerifier?: ClerkWebhookVerifier;
   readonly webhookProcessor?: ClerkWebhookProcessor;
+  readonly serviceCatalogRepository?: ServiceCatalogRepository;
+  readonly leadRepository?: LeadRepository;
+  readonly organizationRepository?: OrganizationRepository;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -33,6 +49,11 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const serverOptions: FastifyServerOptions = {
     bodyLimit: config.BODY_LIMIT_BYTES,
     trustProxy: config.TRUST_PROXY,
+    ajv: {
+      customOptions: {
+        removeAdditional: false,
+      },
+    },
     genReqId: () => randomUUID(),
     logger:
       options.logger ??
@@ -78,6 +99,34 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       new OfficialClerkWebhookVerifier(config.CLERK_WEBHOOK_SIGNING_SECRET ?? "");
     const processor = options.webhookProcessor ?? new ClerkWebhookService(app.databasePool!);
     await app.register(clerkWebhookRoutes, { verifier, service: processor });
+  }
+
+  const hasPhase4Dependencies = app.databasePool !== null ||
+    (
+      options.serviceCatalogRepository !== undefined &&
+      options.leadRepository !== undefined &&
+      options.organizationRepository !== undefined
+    );
+  if (hasPhase4Dependencies) {
+    const authorization = new AuthorizationService();
+    const serviceCatalogRepository = options.serviceCatalogRepository ??
+      new PostgresServiceCatalogRepository(app.databasePool!);
+    const leadRepository = options.leadRepository ?? new PostgresLeadRepository(app.databasePool!);
+    const organizationRepository = options.organizationRepository ??
+      new PostgresOrganizationRepository(app.databasePool!);
+
+    await app.register(serviceCatalogRoutes, {
+      prefix: "/api/v1",
+      service: new ServiceCatalogService(serviceCatalogRepository, authorization),
+    });
+    await app.register(leadRoutes, {
+      prefix: "/api/v1",
+      service: new LeadService(leadRepository, authorization),
+    });
+    await app.register(organizationRoutes, {
+      prefix: "/api/v1",
+      service: new OrganizationService(organizationRepository, authorization),
+    });
   }
 
   return app;

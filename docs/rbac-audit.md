@@ -97,7 +97,8 @@ Recomendación: proponer en una migración futura `tickets.confirm_resolution` y
 2. Los roles globales de negocio (`sales`, `support_agent`, `project_lead`, `contributor`) pueden leer organizaciones. El alcance transversal puede ser legítimo, pero debe quedar explícito y probado.
 3. `contributor` y `project_member` pueden crear comentarios internos y leer comentarios internos en su alcance. Debe confirmarse que es necesario para todos los colaboradores.
 4. `files.upload` no distingue clasificación o tipo de padre. La autorización debe comprobar organización, proyecto/ticket, visibilidad, estado y política de archivo.
-5. `services.manage` no existe, aunque el documento funcional contempla administración del catálogo. No se agrega en esta ejecución.
+5. Hallazgo histórico resuelto en Fase 4.5: `services.manage` se agrega mediante 0005 solo a
+   super_admin y admin; la migración está validada pero no aplicada sobre `public`.
 
 ## Cruce de organizaciones
 
@@ -117,4 +118,3 @@ El esquema RBAC puede expresar los tres alcances, pero la semilla no impide cruc
 Las 142 asociaciones son **estructuralmente válidas**: no contienen duplicados, referencias inexistentes ni elementos sin cobertura. Sin embargo, **necesitan correcciones antes de producción** por equivalencia total entre `admin`/`super_admin`, equivalencia total entre `client_manager`/`client_contact` y permisos de transición/cierre demasiado amplios para clientes.
 
 La semilla no se modifica en esta fase. Las correcciones deberán presentarse como una migración/seed explícita, con diff de permisos y pruebas de no escalación.
-

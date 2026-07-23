@@ -1,8 +1,8 @@
 # Validación runtime de PostgreSQL
 
 Fecha: 2026-07-22  
-Estado: **completada satisfactoriamente como prueba complementaria en PostgreSQL 18.4**.  
-PostgreSQL 16 continúa pendiente y esta ejecución no debe presentarse como sustituto.
+Estado: **completada satisfactoriamente como evidencia runtime oficial en PostgreSQL 18.4**.
+La familia soportada es PostgreSQL 18.x. PostgreSQL 16 no fue probado ni está soportado, y no es un gate.
 
 ## Conexión sanitizada y aislamiento
 
@@ -295,4 +295,4 @@ Antes de eliminar el esquema había 0 filas residuales de prueba en las tablas n
 
 ## Limitación de versión
 
-La sintaxis, restricciones y pruebas funcionaron en PostgreSQL 18.4. Sigue pendiente repetir el mismo script contra PostgreSQL 16 para cerrar la compatibilidad objetivo. Los resultados no muestran una dependencia exclusiva de PostgreSQL 18, pero eso no reemplaza la prueba principal.
+La sintaxis, restricciones y pruebas funcionaron en PostgreSQL 18.4 y constituyen la prueba runtime oficial. No se afirma compatibilidad con PostgreSQL 16. Si el proyecto adopta una versión fuera de PostgreSQL 18.x, deberá repetir baseline, catálogo, migraciones, rollbacks y pruebas antes del despliegue.

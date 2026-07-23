@@ -20,6 +20,7 @@ Estado general: aprobado para diseño del MVP. Las migraciones de brechas se doc
 | D-013 | Módulos/ESM | CommonJS vs ESM | ESM (`type: module`, NodeNext) | Imports explícitos y configuración uniforme | No | Aprobada técnica |
 | D-014 | Validación de entorno | Valores dispersos vs schema único | Zod valida al arrancar; tests pueden inyectar entorno | Fallo temprano y mensajes sin secretos | No | Aprobada técnica |
 | D-015 | RBAC semilla | Forzar 125 vs preservar 142 | Preservar 142 y auditar; no modificar en esta ejecución | Requiere corrección explícita antes de producción | Seed futura | Aprobada |
+| D-016 | Versión PostgreSQL | PostgreSQL 16 objetivo histórico vs runtime ya validado en 18.4 | Soportar PostgreSQL 18.x; 18.4 es la versión validada oficial | Staging/producción permanecen en 18.x; otra versión exige revalidación completa | No | Aprobada; sustituye el gate PostgreSQL 16 |
 
 ## Modelos futuros recomendados
 
@@ -137,4 +138,3 @@ El SQL actual soporta organización, solicitante, responsable individual opciona
 ## Limitaciones del avance derivado
 
 La fórmula inicial trata todas las tareas válidas con el mismo peso, no refleja esfuerzo, complejidad, hitos, entregables ni tareas bloqueadas. Una tarea pequeña vale lo mismo que una grande. También puede cambiar bruscamente al crear/cancelar tareas. Es aceptable para el MVP si la API identifica el valor como estimación operativa y mantiene métricas de hitos/entregables separadas.
-

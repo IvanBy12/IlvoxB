@@ -30,6 +30,7 @@
 - `src/modules/webhooks/clerk-webhook.verifier.ts`
 - `src/modules/webhooks/clerk-webhook.service.ts`
 - `src/modules/webhooks/clerk-webhook.routes.ts`
+- `src/modules/webhooks/clerk-webhook-error.ts`
 - `src/plugins/clerk.ts`
 - `src/plugins/auth-context.ts`
 - `tests/helpers/actors.ts`
@@ -38,6 +39,7 @@
 - `tests/integration/phase3-database.test.ts`
 - `tests/unit/authorization.test.ts`
 - `tests/unit/file-authorization.test.ts`
+- `tests/unit/clerk-webhook-error.test.ts`
 - `docs/clerk-implementation.md`
 - `docs/authorization-implementation.md`
 - `docs/rbac-migration.md`
@@ -45,6 +47,14 @@
 - `docs/webhook-idempotency.md`
 - `docs/phase-3-test-results.md`
 - `docs/phase-3-security-review.md`
+- `docs/clerk-webhook-root-cause.md`
+- `docs/clerk-webhook-runtime-audit.md`
+- `docs/clerk-staging-validation.md`
+- `docs/clerk-staging-test-results.md`
+- `docs/phase-3-preintegration-results.md`
+- `docs/phase-3-production-migration-runbook.md`
+- `docs/phase-4-readiness.md`
+- `docs/postgresql-version-policy.md`
 - `docs/postgresql-16-validation-pending.md`
 - `docs/phase-3-file-manifest.md`
 

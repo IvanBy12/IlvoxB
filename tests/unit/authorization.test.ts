@@ -24,6 +24,37 @@ describe("AuthorizationService", () => {
       requestedScope: "assigned", resourceAssigneeIds: [USER_B] }).reasonCode).toBe("RESOURCE_NOT_AUTHORIZED");
   });
 
+  it("resolves assigned and own scopes without inventing an organization", () => {
+    const internal = actor({
+      internal: true,
+      organizations: [],
+      permissions: [
+        { code: "leads.read", scopes: ["assigned"] },
+        { code: "tasks.read", scopes: ["own"] },
+      ],
+    });
+    expect(service.can({
+      actor: internal,
+      action: "leads.read",
+      requestedScope: "assigned",
+      resourceAssigneeIds: [USER_A],
+    }).repositoryScope).toEqual({
+      kind: "assigned",
+      actorId: USER_A,
+      organizationIds: [],
+    });
+    expect(service.can({
+      actor: internal,
+      action: "tasks.read",
+      requestedScope: "own",
+      resourceOwnerId: USER_A,
+    }).repositoryScope).toEqual({
+      kind: "own",
+      actorId: USER_A,
+      organizationIds: [],
+    });
+  });
+
   it("requires access_all for a cross-organization global operation", () => {
     const admin = actor({ internal: true, permissions: [{ code: "tickets.read", scopes: ["global"] }] });
     expect(service.can({ actor: admin, action: "tickets.read", organizationId: ORG_B }).allowed).toBe(false);

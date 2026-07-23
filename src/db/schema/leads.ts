@@ -69,7 +69,7 @@ export const leads = pgTable(
     check(
       "chk_leads_conversion",
       sql`(
-        (${table.status} = 'converted' AND ${table.convertedOrganizationId} IS NOT NULL AND ${table.convertedAt} IS NOT NULL)
+        (${table.status} = 'converted' AND ${table.convertedAt} IS NOT NULL)
         OR
         (${table.status} <> 'converted' AND ${table.convertedOrganizationId} IS NULL AND ${table.convertedAt} IS NULL)
       )`,

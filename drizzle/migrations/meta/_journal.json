@@ -29,6 +29,20 @@
       "when": 1784761761208,
       "tag": "0003_phase3-clerk-event-idempotency",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784834099872,
+      "tag": "0004_phase4-5-lead-standalone-conversion",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784834112902,
+      "tag": "0005_phase4-5-services-manage",
+      "breakpoints": true
     }
   ]
 }

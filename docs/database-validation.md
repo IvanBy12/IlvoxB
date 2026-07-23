@@ -10,14 +10,14 @@ Tamaño leído: 40.731 bytes.
 | Tipo de validación | Estado | Resultado |
 | --- | --- | --- |
 | Validación estática | Completada | Sin duplicados estructurales, referencias desconocidas ni referencias hacia tablas todavía no creadas |
-| Ejecución en PostgreSQL 16 | Pendiente | PostgreSQL 16 no está instalado/disponible en el entorno |
-| Ejecución en otra versión | Completada | PostgreSQL 18.4, esquema temporal aislado, SQL original aplicado correctamente |
+| PostgreSQL 18.4 oficial | Completada | Esquema temporal aislado, SQL original aplicado correctamente |
+| PostgreSQL 16 | No evaluada | No probado, no soportado oficialmente y no bloqueante |
 | Pruebas positivas/negativas de `CHECK` | Completadas | 55/55 aprobadas con restricción esperada y rollback |
 | Pruebas de claves foráneas | Completadas | 43/43; 41 RESTRICT, 2 CASCADE y NO ACTION comprobados |
 | Rollback real | Completado | Inserción, actualización, eliminación y operación multitabla |
 | Consulta de catálogos y paridad real | Completada en PostgreSQL 18.4 | 19 tablas, 199 columnas y 87 índices físicos |
 
-**El SQL fue validado en ejecución sobre PostgreSQL 18.4. PostgreSQL 16 continúa pendiente.**
+**El SQL fue validado en ejecución sobre PostgreSQL 18.4, evidencia runtime oficial de PostgreSQL 18.x. PostgreSQL 16 no fue probado y no se afirma compatibilidad.**
 
 ## Nuevo intento de validación runtime
 
@@ -101,17 +101,19 @@ Orden de tablas confirmado:
 
 La semilla contiene 11 roles, 23 permisos y 142 asociaciones distintas. Su auditoría semántica está en `rbac-audit.md`.
 
-## Compatibilidad estática con PostgreSQL 16
+## Observación estática histórica sobre PostgreSQL 16
 
-Las construcciones utilizadas están disponibles en PostgreSQL 16: UUID con `pgcrypto`, columnas identity, columnas generadas `STORED`, `num_nonnulls`, JSONB, `inet`, índices parciales y expresiones en índices. No se detectó sintaxis exclusiva de PostgreSQL 18.
+La auditoría estática observó construcciones conocidas por PostgreSQL 16: UUID con `pgcrypto`, columnas identity, columnas generadas `STORED`, `num_nonnulls`, JSONB, `inet`, índices parciales y expresiones en índices. Esta observación no constituye prueba ni soporte oficial.
 
-La ejecución en PostgreSQL 18.4 confirmó expresión generada, FK compuestas, índices, semilla, 55 CHECK y rollback. Esto no demuestra por sí solo PostgreSQL 16: queda pendiente repetir exactamente el validador en esa versión y comparar los resultados.
+La ejecución en PostgreSQL 18.4 confirmó expresión generada, FK compuestas, índices, semilla, 55 CHECK y rollback. Esto no demuestra PostgreSQL 16, cuya compatibilidad permanece desconocida y no bloqueante.
 
-## Guía reproducible para PostgreSQL 16
+## Guía histórica para validar una versión diferente
+
+No ejecutar esta guía para PostgreSQL 16 bajo la política vigente. Solo se reactiva tras una nueva decisión arquitectónica que seleccione una versión fuera de PostgreSQL 18.x.
 
 ### Precondiciones
 
-- PostgreSQL 16.x y sus herramientas cliente.
+- La versión concreta aprobada por la nueva decisión y sus herramientas cliente.
 - Credenciales de una cuenta con permiso para crear/eliminar una base temporal y crear `pgcrypto`.
 - Una copia cuyo checksum coincida con el registrado arriba.
 - No apuntar a una base existente ni reutilizar nombres de producción.
@@ -204,9 +206,9 @@ dropdb --maintenance-db=postgres --if-exists --force $validationDb
 
 No se creó ni eliminó ninguna base durante esta ejecución.
 
-## Pendiente para cerrar compatibilidad objetivo
+## Procedimiento ante un futuro cambio de versión
 
-1. Disponer de una base PostgreSQL 16 temporal y aislada.
+1. Aprobar la nueva versión y disponer de una base temporal aislada de esa versión.
 2. Ejecutar `scripts/database-runtime-validate.mjs` contra esa conexión.
 3. Confirmar que los resultados coinciden con PostgreSQL 18.4.
 4. Conservar la evidencia y limpiar únicamente los recursos temporales creados.

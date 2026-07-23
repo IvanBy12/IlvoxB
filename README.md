@@ -2,12 +2,15 @@
 
 Backend de ILVOX construido con Node.js, TypeScript, Fastify, Drizzle ORM y PostgreSQL.
 
-La Fase 3 incorpora autenticación oficial Clerk, perfil local, `ActorContext`, autorización contextual, scopes SQL, `/me`, webhooks idempotentes y audiencia de archivos. Los módulos funcionales completos continúan fuera de alcance.
+Las Fases 3–3.5 incorporan Clerk, perfil local, `ActorContext`, autorización contextual,
+scopes SQL, `/me`, webhooks idempotentes y audiencia de archivos. Fases 4–4.5 añaden
+catálogo administrable, leads, conversión standalone y organizaciones opcionales usando
+`/api/v1`.
 
 ## Requisitos
 
 - Node.js 22 o superior.
-- PostgreSQL 16 para validar la compatibilidad objetivo.
+- PostgreSQL 18.x; la versión runtime validada oficialmente es PostgreSQL 18.4.
 
 ## Inicio local
 
@@ -24,12 +27,26 @@ npm run check
 npm run audit:sql -- C:\ruta\ilvox_complete_reconstructed.sql
 npm run audit:rbac -- C:\ruta\ilvox_complete_reconstructed.sql
 npm run audit:parity -- C:\ruta\ilvox_complete_reconstructed.sql
+npm run audit:constraint-names
 npm run db:validate:phase3 -- --database-url
+npm run db:validate:phase45 -- --database-url
 npm run test:database -- --database-url
+npm run smoke:phase45:public
 ```
+
+La API está descrita en `docs/phase-4-api.md` y `docs/openapi.json`. Las organizaciones son
+opcionales para el MVP. No existen contactos empresariales ni invitaciones en este alcance.
 
 La baseline exacta está en `drizzle/baseline/`. Antes de usar migraciones, siga
 `docs/database-parity.md`: la migración `0000` es una guarda de seguridad y falla
 deliberadamente mientras el entorno no haya reconocido la baseline.
 
-Las migraciones de Fase 3 solo deben validarse en esquemas temporales; no use `drizzle-kit push`. PostgreSQL 16 continúa pendiente antes de producción. La documentación está en [`docs/`](./docs/).
+Las migraciones deben validarse en esquemas temporales; no use `drizzle-kit push`. Las
+migraciones 0004–0005 están versionadas, aplicadas sobre `GestionIlvox.public` y validadas con
+smoke tests reales. El resultado de despliegue está en
+`docs/phase-4-5-deployment-results.md`.
+
+PostgreSQL 16 no fue probado ni está soportado oficialmente, pero no es un gate. Cualquier
+versión fuera de PostgreSQL 18.x requiere revalidación completa. La auditoría npm del cierre
+local quedó inconclusa por falta de acceso autorizado al registro y debe repetirse antes del
+despliegue público.
