@@ -30,6 +30,8 @@ ese modelo; no autoriza crear relaciones o columnas por conveniencia.
 - Fases 0–3.5: salud, Clerk, `/me`, webhooks, RBAC y contratos de archivos.
 - Fases 4–4.5: catálogo administrable, captación y operación de leads, conversión standalone
   u organizacional, organizaciones opcionales y membresías locales.
+- Fase 5: proyectos tenant-bound, miembros y roles de proyecto, hitos, entregables, tareas de
+  proyecto y tareas internas standalone.
 
 El permiso `services.manage` está versionado en 0005. Los contactos empresariales permanecen
 fuera del runtime y no se usa `organization_memberships` como sustituto.
@@ -40,8 +42,22 @@ Las escrituras sensibles se realizan en una transacción que incluye `audit_even
 La conversión bloquea el lead con `FOR UPDATE`, exige `approved`, crea o reutiliza una
 organización de forma explícita y actualiza el vínculo y estado de manera atómica.
 
-Auditoría conserva metadatos mínimos. Correo, teléfono, mensaje, NIT normalizado, tokens,
-secretos y payloads completos quedan excluidos.
+Fase 5 bloquea proyectos, tareas, hitos y entregables antes de mutarlos. Las transiciones
+comparan el estado observado y los PATCH/asignaciones pueden comparar `expectedUpdatedAt`.
+Crear hijos bloquea el proyecto para impedir escrituras posteriores a `delivered` o
+`cancelled`.
+
+Auditoría conserva metadatos mínimos. Correo, teléfono, mensaje, descripción, NIT
+normalizado, tokens, secretos y payloads completos quedan excluidos.
+
+## Contextos de Fase 5
+
+Los proyectos siempre tienen organización. Miembros, hitos, entregables y tareas de proyecto
+derivan ese contexto del proyecto y conservan las FK compuestas actuales.
+
+Una tarea standalone tiene los tres campos contextuales nulos y se autoriza mediante scopes
+internos `global|assigned|own`; `NULL` nunca significa público ni tenant compartido. El runtime
+de Fase 5 excluye tareas de tickets.
 
 ## Archivos
 

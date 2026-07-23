@@ -20,6 +20,7 @@ const SENSITIVE_KEYS = new Set([
   "email",
   "phone",
   "message",
+  "description",
   "taxId",
   "taxIdNormalized",
   "primaryEmail",

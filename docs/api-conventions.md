@@ -28,6 +28,17 @@ Fecha de corte: 23 de julio de 2026.
   scope resuelto por `AuthorizationService`.
 - Un 404 puede representar inexistencia o recurso fuera de scope para no revelar existencia.
 - Un PATCH genérico de lead no acepta estado, asignación ni conversión.
+- Un PATCH genérico de proyecto no acepta organización, responsable ni estado.
+- Un PATCH genérico de tarea no acepta proyecto, organización, ticket, assignee ni estado.
+- Cambios de responsable, asignación y estado usan rutas de intención separadas.
+
+## Concurrencia de Fase 5
+
+- Transiciones y mutaciones contextuales usan transacciones y locks de fila.
+- `expectedUpdatedAt` opcional permite detectar ediciones/asignaciones con una versión
+  observada obsoleta.
+- Un estado observado distinto, un proyecto terminal o un duplicado devuelve 409.
+- Los cuerpos son cerrados; los campos desconocidos devuelven 400.
 
 ## Errores relevantes
 

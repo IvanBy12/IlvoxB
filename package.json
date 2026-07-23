@@ -29,7 +29,8 @@
     "audit:sql": "node scripts/audit-sql.mjs",
     "audit:rbac": "node scripts/audit-rbac.mjs",
     "audit:parity": "node scripts/audit-drizzle-parity.mjs",
-    "audit:constraint-names": "node scripts/audit-constraint-names.mjs"
+    "audit:constraint-names": "node scripts/audit-constraint-names.mjs",
+    "openapi:phase5": "node scripts/generate-phase5-openapi.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.12.0",

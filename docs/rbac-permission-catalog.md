@@ -46,3 +46,18 @@ Estado físico: **37 permisos y 159 asociaciones distintas** tras 0001–0005 en
 `services.manage` tiene exactamente dos asociaciones, sin roles cliente ni adicionales.
 Los cinco permisos globales sensibles permanecen exclusivos de `global:super_admin`.
 No se confía ningún scope proporcionado por el navegador.
+
+## Aplicación en Fase 5
+
+No se añadieron permisos ni asociaciones RBAC: el catálogo físico permanece en 37 permisos y
+159 asociaciones.
+
+- `projects.read` cubre listados/detalle de proyectos, miembros, hitos y entregables.
+- `projects.manage` cubre creación/edición/transición/asignación del proyecto, alta/cambio de
+  rol de miembros y mutaciones de hitos/entregables.
+- `tasks.read` cubre tareas de proyecto y standalone autorizadas.
+- `tasks.manage` cubre creación, edición, asignación y transición.
+
+Los grants de rol de proyecto se materializan como scope `assigned` y se vuelven a comprobar
+con `EXISTS project_members` dentro de SQL. Los roles cliente no tienen permisos de tareas.
+Fase 5 no crea permisos más granulares sin una migración RBAC aprobada.

@@ -31,6 +31,14 @@ import type { OrganizationRepository } from "./modules/organizations/organizatio
 import { PostgresOrganizationRepository } from "./modules/organizations/organization.repository.js";
 import { OrganizationService } from "./modules/organizations/organization.service.js";
 import { organizationRoutes } from "./modules/organizations/organization.routes.js";
+import type { ProjectRepository } from "./modules/projects/project.types.js";
+import { PostgresProjectRepository } from "./modules/projects/project.repository.js";
+import { ProjectService } from "./modules/projects/project.service.js";
+import { projectRoutes } from "./modules/projects/project.routes.js";
+import type { TaskRepository } from "./modules/tasks/task.types.js";
+import { PostgresTaskRepository } from "./modules/tasks/task.repository.js";
+import { TaskService } from "./modules/tasks/task.service.js";
+import { taskRoutes } from "./modules/tasks/task.routes.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -42,6 +50,8 @@ export interface BuildAppOptions {
   readonly serviceCatalogRepository?: ServiceCatalogRepository;
   readonly leadRepository?: LeadRepository;
   readonly organizationRepository?: OrganizationRepository;
+  readonly projectRepository?: ProjectRepository;
+  readonly taskRepository?: TaskRepository;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -126,6 +136,23 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(organizationRoutes, {
       prefix: "/api/v1",
       service: new OrganizationService(organizationRepository, authorization),
+    });
+  }
+
+  const hasPhase5Dependencies = app.databasePool !== null ||
+    (options.projectRepository !== undefined && options.taskRepository !== undefined);
+  if (hasPhase5Dependencies) {
+    const authorization = new AuthorizationService();
+    const projectRepository = options.projectRepository ??
+      new PostgresProjectRepository(app.databasePool!);
+    const taskRepository = options.taskRepository ?? new PostgresTaskRepository(app.databasePool!);
+    await app.register(projectRoutes, {
+      prefix: "/api/v1",
+      service: new ProjectService(projectRepository, authorization),
+    });
+    await app.register(taskRoutes, {
+      prefix: "/api/v1",
+      service: new TaskService(taskRepository, authorization),
     });
   }
 

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ILVOX Backend API",
-    "version": "0.4.5",
-    "description": "Contrato desplegado de Fase 4.5: organizaciones opcionales, conversión standalone y administración de servicios. No incluye contactos."
+    "version": "0.5.0",
+    "description": "Contrato implementado de Fase 5: proyectos ligados a organizaciones, miembros, hitos, entregables y tareas internas o de proyecto. No incluye tickets, comentarios ni archivos."
   },
   "servers": [
     {
@@ -11,143 +11,286 @@
     }
   ],
   "tags": [
-    { "name": "Services" },
-    { "name": "Leads" },
-    { "name": "Organizations" },
-    { "name": "Memberships" }
+    {
+      "name": "Services"
+    },
+    {
+      "name": "Leads"
+    },
+    {
+      "name": "Organizations"
+    },
+    {
+      "name": "Memberships"
+    },
+    {
+      "name": "Projects"
+    },
+    {
+      "name": "Project Members"
+    },
+    {
+      "name": "Milestones"
+    },
+    {
+      "name": "Deliverables"
+    },
+    {
+      "name": "Tasks"
+    }
   ],
   "paths": {
     "/services": {
       "get": {
-        "tags": ["Services"],
+        "tags": [
+          "Services"
+        ],
         "summary": "List public active services",
         "security": [],
         "x-permission": "public",
         "x-scope": "is_public=true AND is_active=true",
         "parameters": [
-          { "$ref": "#/components/parameters/Page" },
-          { "$ref": "#/components/parameters/PageSize" },
-          { "$ref": "#/components/parameters/Search" },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          },
           {
             "name": "category",
             "in": "query",
-            "schema": { "$ref": "#/components/schemas/ServiceCategory" }
+            "schema": {
+              "$ref": "#/components/schemas/ServiceCategory"
+            }
           }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/services/{serviceId}": {
       "get": {
-        "tags": ["Services"],
+        "tags": [
+          "Services"
+        ],
         "summary": "Get a public active service",
         "security": [],
         "x-permission": "public",
         "x-scope": "is_public=true AND is_active=true",
-        "parameters": [{ "$ref": "#/components/parameters/ServiceId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/admin/services": {
       "get": {
-        "tags": ["Services"],
+        "tags": [
+          "Services"
+        ],
         "summary": "List services for internal administration",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "services.read",
         "x-scope": "global",
         "parameters": [
-          { "$ref": "#/components/parameters/Page" },
-          { "$ref": "#/components/parameters/PageSize" },
-          { "$ref": "#/components/parameters/Search" },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          },
           {
             "name": "category",
             "in": "query",
-            "schema": { "$ref": "#/components/schemas/ServiceCategory" }
+            "schema": {
+              "$ref": "#/components/schemas/ServiceCategory"
+            }
           },
-          { "name": "isPublic", "in": "query", "schema": { "type": "boolean" } },
-          { "name": "isActive", "in": "query", "schema": { "type": "boolean" } }
+          {
+            "name": "isPublic",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       },
       "post": {
-        "tags": ["Services"],
+        "tags": [
+          "Services"
+        ],
         "summary": "Create a service",
         "description": "Creates a catalog record without price, order, slug, CMS, files, or physical deletion.",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "services.manage",
         "x-scope": "global internal actor",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ServiceCreate" }
+              "schema": {
+                "$ref": "#/components/schemas/ServiceCreate"
+              }
             }
           }
         },
         "responses": {
-          "201": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/admin/services/{serviceId}": {
       "get": {
-        "tags": ["Services"],
+        "tags": [
+          "Services"
+        ],
         "summary": "Get any service for internal administration",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "services.read",
         "x-scope": "global",
-        "parameters": [{ "$ref": "#/components/parameters/ServiceId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "patch": {
-        "tags": ["Services"],
+        "tags": [
+          "Services"
+        ],
         "summary": "Update, publish, hide, activate, or deactivate a service",
         "description": "Public catalog visibility requires both isPublic=true and isActive=true.",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "services.manage",
         "x-scope": "global internal actor",
-        "parameters": [{ "$ref": "#/components/parameters/ServiceId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ServiceId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ServicePatch" }
+              "schema": {
+                "$ref": "#/components/schemas/ServicePatch"
+              }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/leads": {
       "post": {
-        "tags": ["Leads"],
+        "tags": [
+          "Leads"
+        ],
         "summary": "Capture a public lead",
         "description": "Forces status=new and no assignee. Repeated email addresses are allowed. Limited to 10 requests/minute per application instance.",
         "security": [],
@@ -157,322 +300,1849 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PublicLeadInput" }
+              "schema": {
+                "$ref": "#/components/schemas/PublicLeadInput"
+              }
             }
           }
         },
         "responses": {
-          "201": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       },
       "get": {
-        "tags": ["Leads"],
+        "tags": [
+          "Leads"
+        ],
         "summary": "List authorized leads",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "leads.read",
         "x-scope": "global or assigned in SQL; internal actors only",
         "parameters": [
-          { "$ref": "#/components/parameters/Page" },
-          { "$ref": "#/components/parameters/PageSize" },
-          { "$ref": "#/components/parameters/Search" },
-          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/LeadStatus" } },
-          { "name": "serviceId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
-          { "name": "assignedToUserId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
-          { "name": "createdFrom", "in": "query", "schema": { "type": "string", "format": "date-time" } },
-          { "name": "createdTo", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/LeadStatus"
+            }
+          },
+          {
+            "name": "serviceId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "assignedToUserId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "createdTo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
           {
             "name": "sortBy",
             "in": "query",
-            "schema": { "type": "string", "enum": ["createdAt", "updatedAt"], "default": "createdAt" }
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "updatedAt"
+              ],
+              "default": "createdAt"
+            }
           },
           {
             "name": "sortDirection",
             "in": "query",
-            "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" }
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
           }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       }
     },
     "/leads/{leadId}": {
       "get": {
-        "tags": ["Leads"],
+        "tags": [
+          "Leads"
+        ],
         "summary": "Get an authorized lead and redacted audit history",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "leads.read",
         "x-scope": "global or assigned in SQL; internal actors only",
-        "parameters": [{ "$ref": "#/components/parameters/LeadId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LeadId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "patch": {
-        "tags": ["Leads"],
+        "tags": [
+          "Leads"
+        ],
         "summary": "Update commercial lead fields",
         "description": "Status, assignment and conversion fields are forbidden.",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "leads.manage",
         "x-scope": "global or assigned in SQL; internal actors only",
-        "parameters": [{ "$ref": "#/components/parameters/LeadId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LeadId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/LeadCommercialPatch" }
+              "schema": {
+                "$ref": "#/components/schemas/LeadCommercialPatch"
+              }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/leads/{leadId}/transition": {
       "post": {
-        "tags": ["Leads"],
+        "tags": [
+          "Leads"
+        ],
         "summary": "Apply a lead state-machine transition",
         "description": "converted is rejected here. Rejection and reopen require reason.",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "leads.manage",
         "x-scope": "global or assigned in SQL; internal actors only",
-        "parameters": [{ "$ref": "#/components/parameters/LeadId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LeadId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["status"],
+                "required": [
+                  "status"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "status": { "$ref": "#/components/schemas/LeadStatus" },
-                  "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+                  "status": {
+                    "$ref": "#/components/schemas/LeadStatus"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/leads/{leadId}/assign": {
       "post": {
-        "tags": ["Leads"],
+        "tags": [
+          "Leads"
+        ],
         "summary": "Assign an active internal user",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "leads.manage",
         "x-scope": "global or assigned in SQL; internal actors only",
-        "parameters": [{ "$ref": "#/components/parameters/LeadId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LeadId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["assignedToUserId"],
+                "required": [
+                  "assignedToUserId"
+                ],
                 "additionalProperties": false,
                 "properties": {
-                  "assignedToUserId": { "type": "string", "format": "uuid" }
+                  "assignedToUserId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/leads/{leadId}/convert": {
       "post": {
-        "tags": ["Leads"],
+        "tags": [
+          "Leads"
+        ],
         "summary": "Convert an approved lead transactionally",
         "description": "Uses FOR UPDATE. standalone needs only leads.manage; organization modes also need organizations.manage. No mode creates a contact or Clerk identity.",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "leads.manage; plus organizations.manage for create_organization or reuse_organization",
         "x-scope": "global or assigned lead; organization scope only for organization modes",
-        "parameters": [{ "$ref": "#/components/parameters/LeadId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LeadId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/LeadConversionInput" }
+              "schema": {
+                "$ref": "#/components/schemas/LeadConversionInput"
+              }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/organizations": {
       "get": {
-        "tags": ["Organizations"],
+        "tags": [
+          "Organizations"
+        ],
         "summary": "List authorized organizations",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "organizations.read",
         "x-scope": "global requires organizations.access_all; otherwise organization IDs in SQL",
         "parameters": [
-          { "$ref": "#/components/parameters/Page" },
-          { "$ref": "#/components/parameters/PageSize" },
-          { "$ref": "#/components/parameters/Search" },
-          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/OrganizationStatus" } },
-          { "name": "createdFrom", "in": "query", "schema": { "type": "string", "format": "date-time" } },
-          { "name": "createdTo", "in": "query", "schema": { "type": "string", "format": "date-time" } }
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/OrganizationStatus"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "createdTo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
         }
       },
       "post": {
-        "tags": ["Organizations"],
+        "tags": [
+          "Organizations"
+        ],
         "summary": "Create an organization",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "organizations.manage",
         "x-scope": "internal actor",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/OrganizationCreate" }
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationCreate"
+              }
             }
           }
         },
         "responses": {
-          "201": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/organizations/{organizationId}": {
       "get": {
-        "tags": ["Organizations"],
+        "tags": [
+          "Organizations"
+        ],
         "summary": "Get an authorized organization",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "organizations.read",
         "x-scope": "global or organization ID in SQL",
-        "parameters": [{ "$ref": "#/components/parameters/OrganizationId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "patch": {
-        "tags": ["Organizations"],
+        "tags": [
+          "Organizations"
+        ],
         "summary": "Update an authorized organization",
         "description": "Current RBAC permits internal actors with organizations.manage. client_manager has no write permission and receives 403.",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "organizations.manage",
         "x-scope": "global or organization ID in SQL",
-        "parameters": [{ "$ref": "#/components/parameters/OrganizationId" }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/OrganizationPatch" }
-            }
-          }
-        },
-        "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
-        }
-      }
-    },
-    "/organizations/{organizationId}/members": {
-      "get": {
-        "tags": ["Memberships"],
-        "summary": "List organization memberships",
-        "security": [{ "clerkSession": [] }],
-        "x-permission": "organizations.read",
-        "x-scope": "organization ID in SQL",
-        "parameters": [{ "$ref": "#/components/parameters/OrganizationId" }],
-        "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "404": { "$ref": "#/components/responses/NotFound" }
-        }
-      },
-      "post": {
-        "tags": ["Memberships"],
-        "summary": "Create a local organization membership",
-        "description": "No Clerk invitation is created. Only client_manager or client_contact.",
-        "security": [{ "clerkSession": [] }],
-        "x-permission": "organization_members.manage",
-        "x-scope": "organization ID in SQL",
-        "parameters": [{ "$ref": "#/components/parameters/OrganizationId" }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/MemberCreate" }
-            }
-          }
-        },
-        "responses": {
-          "201": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
-        }
-      }
-    },
-    "/organizations/{organizationId}/members/{memberId}": {
-      "patch": {
-        "tags": ["Memberships"],
-        "summary": "Update or revoke a local organization membership",
-        "description": "Revocation preserves local and Clerk users while access ends immediately.",
-        "security": [{ "clerkSession": [] }],
-        "x-permission": "organization_members.manage",
-        "x-scope": "organization ID in SQL",
         "parameters": [
-          { "$ref": "#/components/parameters/OrganizationId" },
-          { "$ref": "#/components/parameters/MemberId" }
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/MemberPatch" }
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationPatch"
+              }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/members": {
+      "get": {
+        "tags": [
+          "Memberships"
+        ],
+        "summary": "List organization memberships",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "organizations.read",
+        "x-scope": "organization ID in SQL",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Memberships"
+        ],
+        "summary": "Create a local organization membership",
+        "description": "No Clerk invitation is created. Only client_manager or client_contact.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "organization_members.manage",
+        "x-scope": "organization ID in SQL",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/organizations/{organizationId}/members/{memberId}": {
+      "patch": {
+        "tags": [
+          "Memberships"
+        ],
+        "summary": "Update or revoke a local organization membership",
+        "description": "Revocation preserves local and Clerk users while access ends immediately.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "organization_members.manage",
+        "x-scope": "organization ID in SQL",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          },
+          {
+            "$ref": "#/components/parameters/MemberId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List authorized projects",
+        "description": "The scope predicate is applied to search, filters, count, ordering and pagination.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.read",
+        "x-scope": "SQL: global OR organization_id granted OR active project membership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ProjectStatus"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "leadUserId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "startFrom",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "dueTo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Whitelist only.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "updatedAt",
+                "name",
+                "startDate",
+                "dueDate"
+              ],
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Create an organization-bound project",
+        "description": "Organization and active internal lead are validated in scope. The server forces planning and never creates organizations or memberships.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "Authorized organization; project organization is mandatory and immutable",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get an authorized project",
+        "description": "Returns 404 for missing or out-of-scope projects.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.read",
+        "x-scope": "SQL: global OR organization_id granted OR active project membership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Update general project data",
+        "description": "Status, lead and organization are protected. expectedUpdatedAt enables optimistic conflict detection.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/assign": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Assign the project lead",
+        "description": "The target must be an active internal local user. Assignment is transactional and audited.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectAssign"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/transition": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Transition project status",
+        "description": "Uses the server state machine, row lock and observed status. Delivery requires all milestones completed and all deliverables approved; terminal exits require administrator and reason.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTransition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/members": {
+      "get": {
+        "tags": [
+          "Project Members"
+        ],
+        "summary": "List project members",
+        "description": "Membership is read only after the parent project passes SQL scope.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.read",
+        "x-scope": "SQL: global OR organization_id granted OR active project membership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Project Members"
+        ],
+        "summary": "Add a project member",
+        "description": "Uses only project roles. Internal users need no organization membership; client users require an active membership in the project organization.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectMemberCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/members/{memberId}": {
+      "patch": {
+        "tags": [
+          "Project Members"
+        ],
+        "summary": "Change a project member role",
+        "description": "Only project_lead, project_member or project_viewer are accepted. Revocation is not exposed because the current schema cannot preserve it.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MemberId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectMemberPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/milestones": {
+      "get": {
+        "tags": [
+          "Milestones"
+        ],
+        "summary": "List project milestones",
+        "description": "The authorized parent project scopes the query.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.read",
+        "x-scope": "SQL: global OR organization_id granted OR active project membership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Milestones"
+        ],
+        "summary": "Create a project milestone",
+        "description": "Organization is derived from the locked project; due date must be inside its date range.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MilestoneCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/milestones/{milestoneId}": {
+      "get": {
+        "tags": [
+          "Milestones"
+        ],
+        "summary": "Get a project milestone",
+        "description": "Both project and milestone identifiers are checked without cross-scope disclosure.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.read",
+        "x-scope": "SQL: global OR organization_id granted OR active project membership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MilestoneId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Milestones"
+        ],
+        "summary": "Update a project milestone",
+        "description": "Status is limited to SQL values; completedAt is server-owned. expectedUpdatedAt detects concurrent updates.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MilestoneId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MilestonePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/deliverables": {
+      "get": {
+        "tags": [
+          "Deliverables"
+        ],
+        "summary": "List project deliverables",
+        "description": "Does not return files or storage URLs.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.read",
+        "x-scope": "SQL: global OR organization_id granted OR active project membership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Deliverables"
+        ],
+        "summary": "Create a project deliverable",
+        "description": "Organization is derived from the project. Milestone association is intentionally unavailable in the current schema.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliverableCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/deliverables/{deliverableId}": {
+      "get": {
+        "tags": [
+          "Deliverables"
+        ],
+        "summary": "Get a project deliverable",
+        "description": "Does not include files.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.read",
+        "x-scope": "SQL: global OR organization_id granted OR active project membership",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/DeliverableId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Deliverables"
+        ],
+        "summary": "Update a project deliverable",
+        "description": "Approval identity and timestamp are server-owned. expectedUpdatedAt detects concurrent updates.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/DeliverableId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliverablePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tasks": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "List authorized project and standalone tasks",
+        "description": "Ticket tasks are excluded. Scope is applied to filters, search, count, ordering and pagination.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tasks.read",
+        "x-scope": "SQL: global OR project membership OR standalone assignee/creator; organization_id NULL is never public",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TaskStatus"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "assignedToUserId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "createdByUserId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "dueFrom",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "dueTo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Whitelist only.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "updatedAt",
+                "title",
+                "dueDate"
+              ],
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Create a project or internal standalone task",
+        "description": "Project organization is derived from projectId. Omitting projectId creates a private standalone task and requires internal global scope. ticketId and organizationId are rejected.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tasks.manage",
+        "x-scope": "SQL: global OR authorized project membership; standalone creation requires internal global scope",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tasks/{taskId}": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Get an authorized task",
+        "description": "Returns 404 for missing or out-of-scope tasks and never exposes ticket tasks.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tasks.read",
+        "x-scope": "SQL: global OR project membership OR standalone assignee/creator; organization_id NULL is never public",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TaskId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Update general task data",
+        "description": "Context, assignee and status are protected. expectedUpdatedAt enables optimistic conflict detection.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tasks.manage",
+        "x-scope": "SQL: global OR authorized project membership; standalone creation requires internal global scope",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TaskId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tasks/{taskId}/assign": {
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Assign a task",
+        "description": "Project tasks require an active project member; standalone tasks require an active internal local user. The row is locked and audited.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tasks.manage",
+        "x-scope": "SQL: global OR authorized project membership; standalone creation requires internal global scope",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TaskId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskAssign"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tasks/{taskId}/transition": {
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Transition task status",
+        "description": "Uses the seven-state server machine, assignee/leader guards, reasons for terminal changes, row lock and observed status.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tasks.manage",
+        "x-scope": "SQL: global OR authorized project membership; standalone creation requires internal global scope",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TaskId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskTransition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     }
@@ -489,58 +2159,145 @@
       "Page": {
         "name": "page",
         "in": "query",
-        "schema": { "type": "integer", "minimum": 1, "default": 1 }
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
       },
       "PageSize": {
         "name": "pageSize",
         "in": "query",
-        "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
       },
       "Search": {
         "name": "search",
         "in": "query",
-        "schema": { "type": "string", "minLength": 1, "maxLength": 320 }
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 320
+        }
       },
       "ServiceId": {
         "name": "serviceId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "LeadId": {
         "name": "leadId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "OrganizationId": {
         "name": "organizationId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
       "MemberId": {
         "name": "memberId",
         "in": "path",
         "required": true,
-        "schema": { "type": "string", "format": "uuid" }
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ProjectId": {
+        "name": "projectId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "MilestoneId": {
+        "name": "milestoneId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "DeliverableId": {
+        "name": "deliverableId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "TaskId": {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
       }
     },
     "schemas": {
       "ServiceCategory": {
         "type": "string",
-        "enum": ["development", "ecommerce", "digital_presence", "automation", "support"]
+        "enum": [
+          "development",
+          "ecommerce",
+          "digital_presence",
+          "automation",
+          "support"
+        ]
       },
       "ServiceCreate": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "category", "description"],
+        "required": [
+          "name",
+          "category",
+          "description"
+        ],
         "properties": {
-          "name": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "category": { "$ref": "#/components/schemas/ServiceCategory" },
-          "description": { "type": "string", "minLength": 1, "maxLength": 5000 },
-          "isPublic": { "type": "boolean", "default": true },
-          "isActive": { "type": "boolean", "default": true }
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "category": {
+            "$ref": "#/components/schemas/ServiceCategory"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "isPublic": {
+            "type": "boolean",
+            "default": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
         }
       },
       "ServicePatch": {
@@ -548,41 +2305,110 @@
         "additionalProperties": false,
         "minProperties": 1,
         "properties": {
-          "name": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "category": { "$ref": "#/components/schemas/ServiceCategory" },
-          "description": { "type": "string", "minLength": 1, "maxLength": 5000 },
-          "isPublic": { "type": "boolean" },
-          "isActive": { "type": "boolean" }
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "category": {
+            "$ref": "#/components/schemas/ServiceCategory"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
         }
       },
       "LeadSource": {
         "type": "string",
-        "enum": ["diagnostic", "quotation", "contact", "referral", "campaign"]
+        "enum": [
+          "diagnostic",
+          "quotation",
+          "contact",
+          "referral",
+          "campaign"
+        ]
       },
       "LeadStatus": {
         "type": "string",
-        "enum": ["new", "contacted", "in_diagnostic", "quotation", "proposal_sent", "negotiation", "approved", "not_approved", "converted"]
+        "enum": [
+          "new",
+          "contacted",
+          "in_diagnostic",
+          "quotation",
+          "proposal_sent",
+          "negotiation",
+          "approved",
+          "not_approved",
+          "converted"
+        ]
       },
       "OrganizationStatus": {
         "type": "string",
-        "enum": ["active", "inactive", "archived"]
+        "enum": [
+          "active",
+          "inactive",
+          "archived"
+        ]
       },
       "OrganizationSize": {
         "type": "string",
-        "enum": ["micro", "small", "medium", "large"]
+        "enum": [
+          "micro",
+          "small",
+          "medium",
+          "large"
+        ]
       },
       "PublicLeadInput": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["fullName", "email", "message", "source"],
+        "required": [
+          "fullName",
+          "email",
+          "message",
+          "source"
+        ],
         "properties": {
-          "fullName": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "companyName": { "type": "string", "minLength": 1, "maxLength": 200 },
-          "email": { "type": "string", "format": "email", "maxLength": 320 },
-          "phone": { "type": "string", "minLength": 1, "maxLength": 40 },
-          "serviceId": { "type": "string", "format": "uuid" },
-          "message": { "type": "string", "minLength": 1, "maxLength": 5000 },
-          "source": { "$ref": "#/components/schemas/LeadSource" }
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "serviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "source": {
+            "$ref": "#/components/schemas/LeadSource"
+          }
         }
       },
       "LeadCommercialPatch": {
@@ -590,13 +2416,45 @@
         "additionalProperties": false,
         "minProperties": 1,
         "properties": {
-          "fullName": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "companyName": { "type": ["string", "null"], "maxLength": 200 },
-          "email": { "type": "string", "format": "email", "maxLength": 320 },
-          "phone": { "type": ["string", "null"], "maxLength": 40 },
-          "serviceId": { "type": ["string", "null"], "format": "uuid" },
-          "message": { "type": "string", "minLength": 1, "maxLength": 5000 },
-          "source": { "$ref": "#/components/schemas/LeadSource" }
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "companyName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          },
+          "serviceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "source": {
+            "$ref": "#/components/schemas/LeadSource"
+          }
         }
       },
       "LeadConversionInput": {
@@ -604,33 +2462,71 @@
           {
             "type": "object",
             "additionalProperties": false,
-            "required": ["mode"],
+            "required": [
+              "mode"
+            ],
             "properties": {
-              "mode": { "const": "standalone" }
+              "mode": {
+                "const": "standalone"
+              }
             }
           },
           {
             "type": "object",
             "additionalProperties": false,
-            "required": ["mode", "name"],
+            "required": [
+              "mode",
+              "name"
+            ],
             "properties": {
-              "mode": { "const": "create_organization" },
-              "name": { "type": "string", "minLength": 1, "maxLength": 160 },
-              "legalName": { "type": "string", "maxLength": 200 },
-              "industry": { "type": "string", "maxLength": 120 },
-              "size": { "$ref": "#/components/schemas/OrganizationSize" },
-              "countryCode": { "type": "string", "pattern": "^[A-Z]{2}$" },
-              "taxId": { "type": "string", "maxLength": 64 },
-              "accountManagerUserId": { "type": "string", "format": "uuid" }
+              "mode": {
+                "const": "create_organization"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "legalName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "industry": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "size": {
+                "$ref": "#/components/schemas/OrganizationSize"
+              },
+              "countryCode": {
+                "type": "string",
+                "pattern": "^[A-Z]{2}$"
+              },
+              "taxId": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "accountManagerUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
             }
           },
           {
             "type": "object",
             "additionalProperties": false,
-            "required": ["mode", "organizationId"],
+            "required": [
+              "mode",
+              "organizationId"
+            ],
             "properties": {
-              "mode": { "const": "reuse_organization" },
-              "organizationId": { "type": "string", "format": "uuid" }
+              "mode": {
+                "const": "reuse_organization"
+              },
+              "organizationId": {
+                "type": "string",
+                "format": "uuid"
+              }
             }
           }
         ]
@@ -638,15 +2534,38 @@
       "OrganizationCreate": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
-          "name": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "legalName": { "type": "string", "maxLength": 200 },
-          "industry": { "type": "string", "maxLength": 120 },
-          "size": { "$ref": "#/components/schemas/OrganizationSize" },
-          "countryCode": { "type": "string", "pattern": "^[A-Z]{2}$" },
-          "taxId": { "type": "string", "maxLength": 64 },
-          "accountManagerUserId": { "type": "string", "format": "uuid" }
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "legalName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "industry": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "size": {
+            "$ref": "#/components/schemas/OrganizationSize"
+          },
+          "countryCode": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "taxId": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "accountManagerUserId": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "OrganizationPatch": {
@@ -654,31 +2573,96 @@
         "additionalProperties": false,
         "minProperties": 1,
         "properties": {
-          "name": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "legalName": { "type": ["string", "null"], "maxLength": 200 },
-          "industry": { "type": ["string", "null"], "maxLength": 120 },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "legalName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "industry": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
           "size": {
             "oneOf": [
-              { "$ref": "#/components/schemas/OrganizationSize" },
-              { "type": "null" }
+              {
+                "$ref": "#/components/schemas/OrganizationSize"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
-          "status": { "$ref": "#/components/schemas/OrganizationStatus" },
-          "countryCode": { "type": ["string", "null"], "pattern": "^[A-Z]{2}$" },
-          "taxId": { "type": ["string", "null"], "maxLength": 64 },
-          "accountManagerUserId": { "type": ["string", "null"], "format": "uuid" }
+          "status": {
+            "$ref": "#/components/schemas/OrganizationStatus"
+          },
+          "countryCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[A-Z]{2}$"
+          },
+          "taxId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 64
+          },
+          "accountManagerUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
         }
       },
       "MemberCreate": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["userId", "roleCode"],
+        "required": [
+          "userId",
+          "roleCode"
+        ],
         "properties": {
-          "userId": { "type": "string", "format": "uuid" },
-          "roleCode": { "type": "string", "enum": ["client_manager", "client_contact"] },
-          "status": { "type": "string", "enum": ["pending", "active"], "default": "pending" },
-          "jobTitle": { "type": "string", "maxLength": 120 },
-          "phone": { "type": "string", "maxLength": 40 }
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "client_manager",
+              "client_contact"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active"
+            ],
+            "default": "pending"
+          },
+          "jobTitle": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 40
+          }
         }
       },
       "MemberPatch": {
@@ -686,30 +2670,481 @@
         "additionalProperties": false,
         "minProperties": 1,
         "properties": {
-          "roleCode": { "type": "string", "enum": ["client_manager", "client_contact"] },
-          "status": { "type": "string", "enum": ["pending", "active", "revoked"] },
-          "jobTitle": { "type": ["string", "null"], "maxLength": 120 },
-          "phone": { "type": ["string", "null"], "maxLength": 40 }
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "client_manager",
+              "client_contact"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "revoked"
+            ]
+          },
+          "jobTitle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          }
         }
       },
       "ApiSuccess": {
         "type": "object",
-        "required": ["data"],
-        "properties": { "data": {} }
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
       },
       "ApiError": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
-            "required": ["code", "message", "requestId"],
+            "required": [
+              "code",
+              "message",
+              "requestId"
+            ],
             "properties": {
-              "code": { "type": "string" },
-              "message": { "type": "string" },
-              "requestId": { "type": "string" },
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
               "details": {}
             }
+          }
+        }
+      },
+      "ProjectStatus": {
+        "type": "string",
+        "enum": [
+          "planning",
+          "in_progress",
+          "paused",
+          "in_review",
+          "delivered",
+          "cancelled"
+        ]
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "ready",
+          "in_progress",
+          "blocked",
+          "in_review",
+          "completed",
+          "cancelled"
+        ]
+      },
+      "Priority": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "urgent"
+        ]
+      },
+      "ProjectCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "organizationId",
+          "name",
+          "description",
+          "leadUserId",
+          "startDate",
+          "dueDate"
+        ],
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "leadUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "ProjectPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "serviceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProjectAssign": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "leadUserId"
+        ],
+        "properties": {
+          "leadUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProjectTransition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ProjectStatus"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "ProjectMemberCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "userId",
+          "roleCode"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "project_lead",
+              "project_member",
+              "project_viewer"
+            ]
+          }
+        }
+      },
+      "ProjectMemberPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "roleCode"
+        ],
+        "properties": {
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "project_lead",
+              "project_member",
+              "project_viewer"
+            ]
+          }
+        }
+      },
+      "MilestoneCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "dueDate"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "MilestonePatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 10000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "completed"
+            ]
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DeliverableCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 10000
+          }
+        }
+      },
+      "DeliverablePatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 10000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_review",
+              "delivered",
+              "approved",
+              "rejected"
+            ]
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TaskCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description",
+          "assignedToUserId",
+          "dueDate"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "assignedToUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "TaskPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "estimatedMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TaskAssign": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assignedToUserId"
+        ],
+        "properties": {
+          "assignedToUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TaskTransition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
           }
         }
       }
@@ -717,35 +3152,83 @@
     "responses": {
       "Success": {
         "description": "Successful response",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiSuccess" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiSuccess"
+            }
+          }
+        }
       },
       "ValidationError": {
         "description": "Validation failed",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
       },
       "Unauthenticated": {
         "description": "Authentication required",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
       },
       "Forbidden": {
         "description": "Permission or scope denied",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
       },
       "NotFound": {
         "description": "Missing or outside authorized scope",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
       },
       "Conflict": {
         "description": "Duplicate, invalid state, incompatible idempotent retry, or concurrency conflict",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
       },
       "PayloadTooLarge": {
         "description": "Request body exceeds configured limit",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
       },
       "RateLimited": {
         "description": "Rate limit exceeded",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
       }
     }
   }
