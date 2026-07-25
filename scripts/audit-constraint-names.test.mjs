@@ -15,6 +15,19 @@ const exportedSql = `
   ALTER TABLE "leads" ADD CONSTRAINT "fk_leads_service"
     FOREIGN KEY ("service_id") REFERENCES "services"("id");
 `;
+const closureExportedSql = `${exportedSql}
+  CREATE TABLE "project_members" (
+    CONSTRAINT "chk_project_members_status" CHECK (true),
+    CONSTRAINT "chk_project_members_revocation" CHECK (true)
+  );
+  ALTER TABLE "project_members" ADD CONSTRAINT "project_members_revoked_by_user_id_fkey"
+    FOREIGN KEY ("revoked_by_user_id") REFERENCES "app_users"("id");
+  ALTER TABLE "deliverables" ADD CONSTRAINT "fk_deliverables_milestone_project"
+    FOREIGN KEY ("milestone_id") REFERENCES "project_milestones"("id");
+  CREATE TABLE "project_milestones" (
+    CONSTRAINT "uq_project_milestones_id_project_organization" UNIQUE("id", "project_id", "organization_id")
+  );
+`;
 
 const prePhase45Definition = `
   CHECK (
@@ -83,4 +96,60 @@ test("fails for drift, duplicate indexes, residual schemas, or an unknown lead c
   assert.equal(result.ok, false);
   assert.deepEqual(result.uniqueConstraints.missingInDatabase, ["uq_leads_email"]);
   assert.equal(result.leadConversionCheck.phase, "unexpected");
+});
+
+test("accepts only the complete pending Phase 5 closure constraint set", () => {
+  const allowedPendingConstraints = {
+    checks: ["chk_project_members_revocation", "chk_project_members_status"],
+    foreignKeys: [
+      "fk_deliverables_milestone_project",
+      "project_members_revoked_by_user_id_fkey",
+    ],
+    uniqueConstraints: ["uq_project_milestones_id_project_organization"],
+  };
+  const pending = buildConstraintAudit({
+    exportedSql: closureExportedSql,
+    physicalConstraints: physical(),
+    duplicatePhysicalIndexes: [],
+    validationSchemas: 0,
+    allowedPendingConstraints,
+    phase5ClosureArtifacts: { columns: 0, indexes: 0 },
+  });
+  assert.equal(pending.ok, true);
+  assert.equal(pending.pendingMode, "phase5_closure_pending");
+
+  const partial = buildConstraintAudit({
+    exportedSql: closureExportedSql,
+    physicalConstraints: [
+      ...physical(),
+      { contype: "c", conname: "chk_project_members_status", definition: "CHECK (true)" },
+    ],
+    duplicatePhysicalIndexes: [],
+    validationSchemas: 0,
+    allowedPendingConstraints,
+    phase5ClosureArtifacts: { columns: 1, indexes: 0 },
+  });
+  assert.equal(partial.ok, false);
+  assert.equal(partial.pendingMode, "drift");
+});
+
+test("rejects Phase 5 columns or indexes applied without the complete constraint set", () => {
+  const result = buildConstraintAudit({
+    exportedSql: closureExportedSql,
+    physicalConstraints: physical(),
+    duplicatePhysicalIndexes: [],
+    validationSchemas: 0,
+    allowedPendingConstraints: {
+      checks: ["chk_project_members_revocation", "chk_project_members_status"],
+      foreignKeys: [
+        "fk_deliverables_milestone_project",
+        "project_members_revoked_by_user_id_fkey",
+      ],
+      uniqueConstraints: ["uq_project_milestones_id_project_organization"],
+    },
+    phase5ClosureArtifacts: { columns: 4, indexes: 2 },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.pendingMode, "phase5_closure_pending");
+  assert.equal(result.phase5ClosureArtifacts.mode, "applied");
 });

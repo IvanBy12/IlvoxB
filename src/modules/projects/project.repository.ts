@@ -44,6 +44,9 @@ interface MemberRow extends QueryResultRow {
   readonly display_name: string | null;
   readonly role_code: ProjectRoleCode;
   readonly assigned_by_user_id: string | null;
+  readonly status: ProjectMemberRecord["status"];
+  readonly revoked_at: Date | null;
+  readonly revoked_by_user_id: string | null;
   readonly joined_at: Date;
   readonly created_at: Date;
   readonly updated_at: Date;
@@ -66,6 +69,7 @@ interface DeliverableRow extends QueryResultRow {
   readonly id: string;
   readonly project_id: string;
   readonly organization_id: string;
+  readonly milestone_id: string | null;
   readonly name: string;
   readonly description: string | null;
   readonly status: DeliverableRecord["status"];
@@ -85,7 +89,8 @@ const PROJECT_SELECT = `SELECT p.id, p.organization_id, p.service_id, s.name AS 
 
 const MEMBER_SELECT = `SELECT pm.project_id, pm.organization_id, pm.user_id,
   nullif(concat_ws(' ', u.first_name, u.last_name), '') AS display_name,
-  r.code AS role_code, pm.assigned_by_user_id, pm.joined_at, pm.created_at, pm.updated_at
+  r.code AS role_code, pm.assigned_by_user_id, pm.status, pm.revoked_at,
+  pm.revoked_by_user_id, pm.joined_at, pm.created_at, pm.updated_at
   FROM project_members pm
   JOIN app_users u ON u.id = pm.user_id
   JOIN roles r ON r.id = pm.role_id AND r.scope = 'project'`;
@@ -94,7 +99,8 @@ const MILESTONE_SELECT = `SELECT m.id, m.project_id, m.organization_id, m.name, 
   m.status, m.due_date::text, m.completed_at, m.created_at, m.updated_at
   FROM project_milestones m`;
 
-const DELIVERABLE_SELECT = `SELECT d.id, d.project_id, d.organization_id, d.name, d.description,
+const DELIVERABLE_SELECT = `SELECT d.id, d.project_id, d.organization_id, d.milestone_id,
+  d.name, d.description,
   d.status, d.approved_by_user_id, d.approved_at, d.created_at, d.updated_at
   FROM deliverables d`;
 
@@ -126,6 +132,9 @@ function mapMember(row: MemberRow): ProjectMemberRecord {
     displayName: row.display_name,
     roleCode: row.role_code,
     assignedByUserId: row.assigned_by_user_id,
+    status: row.status,
+    revokedAt: row.revoked_at,
+    revokedByUserId: row.revoked_by_user_id,
     joinedAt: row.joined_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -152,6 +161,7 @@ function mapDeliverable(row: DeliverableRow): DeliverableRecord {
     id: row.id,
     projectId: row.project_id,
     organizationId: row.organization_id,
+    milestoneId: row.milestone_id,
     name: row.name,
     description: row.description,
     status: row.status,
@@ -182,6 +192,7 @@ function projectScope(
         AND EXISTS (
           SELECT 1 FROM project_members scoped_pm
           WHERE scoped_pm.project_id = ${alias}.id AND scoped_pm.user_id = $${startAt + 1}
+            AND scoped_pm.status = 'active'
         )`,
       values: [[...scope.organizationIds], scope.actorId],
     };
@@ -468,7 +479,9 @@ export class PostgresProjectRepository implements ProjectRepository {
     const project = await this.findAuthorized(scope, projectId);
     if (project === null) return null;
     const result = await this.pool.query<MemberRow>(
-      `${MEMBER_SELECT} WHERE pm.project_id = $1 ORDER BY pm.joined_at, pm.user_id`,
+      `${MEMBER_SELECT}
+       WHERE pm.project_id = $1 AND pm.status = 'active'
+       ORDER BY pm.joined_at, pm.user_id`,
       [projectId],
     );
     return result.rows.map(mapMember);
@@ -517,18 +530,22 @@ export class PostgresProjectRepository implements ProjectRepository {
     projectId: string,
     userId: string,
     roleCode: ProjectRoleCode,
+    expectedUpdatedAt: Date | undefined,
     audit: AuditContext,
   ): Promise<ProjectWriteResult<ProjectMemberRecord>> {
     return transaction(this.pool, async (client) => {
       const project = await this.lockProject(client, scope, projectId);
       if (project === null) return "not_found";
-      const current = await this.selectMember(client, projectId, userId, true);
+      const current = await this.selectMember(client, projectId, userId, true, true);
       if (current === null) return "not_found";
+      if (expectedUpdatedAt !== undefined &&
+          expectedUpdatedAt.getTime() !== current.updatedAt.getTime()) return "conflict";
       await client.query(
         `UPDATE project_members pm
          SET role_id = r.id, updated_at = now()
          FROM roles r
          WHERE pm.project_id = $1 AND pm.user_id = $2
+           AND pm.status = 'active'
            AND r.scope = 'project' AND r.code = $3`,
         [projectId, userId, roleCode],
       );
@@ -540,6 +557,41 @@ export class PostgresProjectRepository implements ProjectRepository {
         entityId: projectId,
         oldValues: { userId, roleCode: current.roleCode },
         newValues: { userId, roleCode },
+      });
+      return (await this.selectMember(client, projectId, userId))!;
+    });
+  }
+
+  revokeMember(
+    scope: AuthorizedRepositoryScope,
+    projectId: string,
+    userId: string,
+    expectedUpdatedAt: Date | undefined,
+    revokedByUserId: string,
+    audit: AuditContext,
+  ): Promise<ProjectWriteResult<ProjectMemberRecord>> {
+    return transaction(this.pool, async (client) => {
+      const project = await this.lockProject(client, scope, projectId);
+      if (project === null) return "not_found";
+      const current = await this.selectMember(client, projectId, userId, true);
+      if (current === null) return "not_found";
+      if (current.status === "revoked") return current;
+      if (expectedUpdatedAt !== undefined &&
+          expectedUpdatedAt.getTime() !== current.updatedAt.getTime()) return "conflict";
+      await client.query(
+        `UPDATE project_members
+         SET status = 'revoked', revoked_at = now(), revoked_by_user_id = $1, updated_at = now()
+         WHERE project_id = $2 AND user_id = $3 AND status = 'active'`,
+        [revokedByUserId, projectId, userId],
+      );
+      await insertAuditEvent(client, {
+        ...audit,
+        organizationId: project.organizationId,
+        action: "project_member.revoked",
+        entityType: "project_member",
+        entityId: projectId,
+        oldValues: { userId, status: "active", roleCode: current.roleCode },
+        newValues: { userId, status: "revoked", revokedByUserId },
       });
       return (await this.selectMember(client, projectId, userId))!;
     });
@@ -690,11 +742,21 @@ export class PostgresProjectRepository implements ProjectRepository {
       const project = await this.lockProject(client, scope, projectId);
       if (project === null) return "not_found";
       if (project.status === "delivered" || project.status === "cancelled") return "conflict";
+      if (input.milestoneId !== undefined &&
+          await this.selectMilestone(client, projectId, input.milestoneId, true) === null) {
+        return "not_found";
+      }
       const inserted = await client.query<{ readonly id: string }>(
         `INSERT INTO deliverables (
-           project_id, organization_id, name, description, status
-         ) VALUES ($1,$2,$3,$4,'pending') RETURNING id`,
-        [projectId, project.organizationId, input.name.trim(), input.description ?? null],
+           project_id, organization_id, milestone_id, name, description, status
+         ) VALUES ($1,$2,$3,$4,$5,'pending') RETURNING id`,
+        [
+          projectId,
+          project.organizationId,
+          input.milestoneId ?? null,
+          input.name.trim(),
+          input.description ?? null,
+        ],
       );
       const id = inserted.rows[0]!.id;
       await insertAuditEvent(client, {
@@ -703,7 +765,7 @@ export class PostgresProjectRepository implements ProjectRepository {
         action: "deliverable.created",
         entityType: "deliverable",
         entityId: id,
-        newValues: { projectId, status: "pending" },
+        newValues: { projectId, milestoneId: input.milestoneId ?? null, status: "pending" },
       });
       return (await this.selectDeliverable(client, projectId, id))!;
     });
@@ -725,6 +787,10 @@ export class PostgresProjectRepository implements ProjectRepository {
       if (current === null) return "not_found";
       if (input.expectedUpdatedAt !== undefined &&
           input.expectedUpdatedAt.getTime() !== current.updatedAt.getTime()) return "conflict";
+      if (input.milestoneId !== undefined && input.milestoneId !== null &&
+          await this.selectMilestone(client, projectId, input.milestoneId, true) === null) {
+        return "not_found";
+      }
       const fields: string[] = [];
       const values: unknown[] = [];
       const set = (column: string, value: unknown): void => {
@@ -733,6 +799,7 @@ export class PostgresProjectRepository implements ProjectRepository {
       };
       if (input.name !== undefined) set("name", input.name.trim());
       if (input.description !== undefined) set("description", input.description);
+      if (input.milestoneId !== undefined) set("milestone_id", input.milestoneId);
       if (input.status !== undefined) {
         set("status", input.status);
         if (input.status === "approved") {
@@ -840,9 +907,13 @@ export class PostgresProjectRepository implements ProjectRepository {
     projectId: string,
     userId: string,
     lock = false,
+    activeOnly = false,
   ): Promise<ProjectMemberRecord | null> {
     const result = await client.query<MemberRow>(
-      `${MEMBER_SELECT} WHERE pm.project_id = $1 AND pm.user_id = $2${lock ? " FOR UPDATE OF pm" : ""}`,
+      `${MEMBER_SELECT}
+       WHERE pm.project_id = $1 AND pm.user_id = $2
+       ${activeOnly ? "AND pm.status = 'active'" : ""}
+       ${lock ? "FOR UPDATE OF pm" : ""}`,
       [projectId, userId],
     );
     return result.rows[0] === undefined ? null : mapMember(result.rows[0]);

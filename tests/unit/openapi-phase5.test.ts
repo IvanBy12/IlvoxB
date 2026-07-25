@@ -16,6 +16,7 @@ const phase5Operations = [
   "GET /projects/{projectId}/members",
   "POST /projects/{projectId}/members",
   "PATCH /projects/{projectId}/members/{memberId}",
+  "POST /projects/{projectId}/members/{memberId}/revoke",
   "GET /projects/{projectId}/milestones",
   "POST /projects/{projectId}/milestones",
   "GET /projects/{projectId}/milestones/{milestoneId}",
@@ -33,15 +34,15 @@ const phase5Operations = [
 ] as const;
 
 describe("Phase 5 OpenAPI", () => {
-  it("contains exactly the implemented Phase 5 operations and 43 total operations", () => {
+  it("contains exactly the implemented Phase 5 operations and 44 total operations", () => {
     const operations = Object.entries(document.paths).flatMap(([path, item]) =>
       Object.keys(item)
         .filter((method) => methods.has(method))
         .map((method) => `${method.toUpperCase()} ${path}`));
-    expect(document.info.version).toBe("0.5.0");
-    expect(operations).toHaveLength(43);
+    expect(document.info.version).toBe("0.5.1");
+    expect(operations).toHaveLength(44);
     expect(phase5Operations.every((operation) => operations.includes(operation))).toBe(true);
-    expect(phase5Operations).toHaveLength(23);
+    expect(phase5Operations).toHaveLength(24);
   });
 
   it("does not add Phase 5 ticket, comment, file, or deletion routes", () => {

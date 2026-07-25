@@ -1,5 +1,13 @@
 # Paridad PostgreSQL, SQL original y Drizzle
 
+> Actualizacion operativa del 24 de julio de 2026: el procedimiento seguro se
+> completo en `GestionIlvox.public`. La historia reconoce exactamente
+> 0000-0007; 0000-0005 se registraron de forma transaccional sin reaplicar su
+> DDL y el migrador oficial aplico solo 0006-0007. El catalogo final es
+> 19/208/45/59/16/56 y RBAC permanece 11/37/159. Cualquier seccion historica
+> que describa la tabla como ausente o proponga reconocer solo 0000 queda
+> anulada por `docs/drizzle-history-recognition.md`.
+
 Fecha: 2026-07-22  
 Estado: comparación estática y catálogo real completados en PostgreSQL 18.4, runtime oficial de PostgreSQL 18.x.
 Fuente de verdad: `C:\Users\leopa\Downloads\ilvox_complete_reconstructed.sql`.
@@ -127,37 +135,12 @@ Antes de marcar:
 
 La implementación actual de Drizzle decide qué omitir por `created_at`; el hash se almacena, pero no se usa para volver a verificar una migración ya registrada. Por eso insertar una fila sin las comprobaciones anteriores puede ocultar drift y provocar fallos o pérdida de datos en migraciones futuras.
 
-Después de aprobar evidencia y respaldo, un operador autorizado puede crear el esquema/tabla de control con la misma forma usada por Drizzle e insertar una única marca para:
-
-- `created_at`: `1784755488024`;
-- `hash`: SHA-256 en minúsculas del archivo de guarda actual, que debe recalcularse en el momento de la operación.
-
-Plantilla para revisión, **no ejecutada y no autorizada automáticamente**:
-
-```sql
-BEGIN;
-
-CREATE SCHEMA IF NOT EXISTS drizzle;
-CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
-    id serial PRIMARY KEY,
-    hash text NOT NULL,
-    created_at bigint
-);
-
--- Sustituir :baseline_hash por el hash recién calculado del archivo de guarda.
--- Antes de insertar, verificar que no haya una fila posterior ni una historia ajena.
-INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT :baseline_hash, 1784755488024
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM drizzle.__drizzle_migrations
-    WHERE created_at = 1784755488024
-);
-
-COMMIT;
-```
-
-La plantilla debe ejecutarse con parámetros de `psql`, revisión por pares y una cuenta de despliegue autorizada. No debe copiarse como SQL interpolado desde una petición HTTP.
+Reconocer una unica marca 0000 es incorrecto cuando los efectos posteriores ya
+existen. El 24 de julio de 2026 el procedimiento operacional verifico y
+registro en una sola transaccion las seis migraciones fisicamente presentes,
+0000-0005, con los hashes recalculados y los timestamps del journal. El detalle
+exacto y el runbook portable estan en `docs/drizzle-history-recognition.md`;
+no se conserva aqui una plantilla SQL parcial que pueda ocultar drift.
 
 ## Comandos de comprobación
 
@@ -168,13 +151,25 @@ npm run audit:sql -- C:\ruta\ilvox_complete_reconstructed.sql
 npm run audit:rbac -- C:\ruta\ilvox_complete_reconstructed.sql
 ```
 
-`drizzle-kit push` queda prohibido para bases con datos. `drizzle-kit migrate` también queda bloqueado por la guarda hasta que la baseline se haya reconocido de forma explícita.
+`drizzle-kit push` queda prohibido para bases con datos. El migrador oficial
+solo debe ejecutarse despues de verificar una historia completa y coherente.
 
 ## Pendiente
 
 - Mantener staging y producción en PostgreSQL 18.x; revalidar completamente antes de adoptar otra versión.
 - Mantener la auditoría exacta de nombres con `npm run audit:constraint-names` antes de futuras migraciones.
 - Recalcular y registrar evidencia de baseline en cada entorno real antes de habilitar migraciones posteriores.
+
+## Estado del cierre de Fase 5
+
+Las migraciones 0006 y 0007 fueron ensayadas y despues aplicadas a `public`
+mediante el migrador oficial. El catalogo persistente es
+19/208/45/59/16/56. La FK compuesta rechazo vinculos entre proyectos, las
+guardas de rollback aprobaron en el entorno temporal, el segundo migrate fue
+no-op y todos los entornos temporales fueron eliminados.
+
+`audit:constraint-names` reporta ahora `phase5_closure` aplicado, sin drift,
+constraints o indices duplicados.
 
 ## Estado tras la preintegración de Fase 3.5
 
@@ -217,3 +212,27 @@ Las auditorías SQL/RBAC conservan la lectura deliberada de la baseline históri
 existe `DATABASE_URL`, añaden una transacción read-only contra el estado vigente. El resultado
 final fue catálogo 19/204/43/57/15/54 y RBAC 11/37/159, sin duplicados, huérfanos ni leaks.
 0005 sigue siendo una migración de datos y no altera el SQL de baseline.
+
+## Estado persistente despues del cierre operativo de Fase 5
+
+El 24 de julio de 2026 se creo y verifico un backup custom de PostgreSQL y se
+ensayo el flujo completo en una base temporal. El ensayo reconocio 0000-0005
+sin ejecutar su DDL, aplico solo 0006-0007 mediante el migrador oficial,
+confirmo un segundo migrate no-op, probo los rollbacks controlados y elimino la
+base temporal.
+
+El mismo reconocimiento se ejecuto despues en `GestionIlvox.public` dentro de
+una sola transaccion con advisory lock y preflight fisico repetido. El historial
+final contiene ocho filas exactas y el catalogo persistente confirma:
+
+- 19 tablas y 208 columnas;
+- 45 foreign keys, 59 checks y 16 unique;
+- 56 indices explicitos;
+- 11 roles, 37 permisos y 159 asociaciones RBAC distintas;
+- cero drift, constraints duplicados, indices duplicados o schemas temporales.
+
+Los hashes y timestamps definitivos, junto con la estructura real de
+`drizzle.__drizzle_migrations`, se documentan en
+`docs/drizzle-history-recognition.md`. La evidencia de backup, ensayo,
+postflight, smokes y limpieza esta en
+`docs/phase-5-operational-deployment.md`.

@@ -7,6 +7,8 @@ export const PROJECT_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 export type ProjectPriority = (typeof PROJECT_PRIORITIES)[number];
 export const PROJECT_ROLE_CODES = ["project_lead", "project_member", "project_viewer"] as const;
 export type ProjectRoleCode = (typeof PROJECT_ROLE_CODES)[number];
+export const PROJECT_MEMBER_STATUSES = ["active", "revoked"] as const;
+export type ProjectMemberStatus = (typeof PROJECT_MEMBER_STATUSES)[number];
 export const MILESTONE_STATUSES = ["pending", "in_progress", "completed"] as const;
 export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number];
 export const DELIVERABLE_STATUSES = ["pending", "in_review", "delivered", "approved", "rejected"] as const;
@@ -69,6 +71,9 @@ export interface ProjectMemberRecord {
   readonly displayName: string | null;
   readonly roleCode: ProjectRoleCode;
   readonly assignedByUserId: string | null;
+  readonly status: ProjectMemberStatus;
+  readonly revokedAt: Date | null;
+  readonly revokedByUserId: string | null;
   readonly joinedAt: Date;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -105,6 +110,7 @@ export interface DeliverableRecord {
   readonly id: string;
   readonly projectId: string;
   readonly organizationId: string;
+  readonly milestoneId: string | null;
   readonly name: string;
   readonly description: string | null;
   readonly status: DeliverableStatus;
@@ -117,11 +123,13 @@ export interface DeliverableRecord {
 export interface DeliverableCreate {
   readonly name: string;
   readonly description?: string;
+  readonly milestoneId?: string;
 }
 
 export interface DeliverablePatch {
   readonly name?: string;
   readonly description?: string | null;
+  readonly milestoneId?: string | null;
   readonly status?: DeliverableStatus;
   readonly expectedUpdatedAt?: Date;
 }
@@ -191,6 +199,15 @@ export interface ProjectRepository {
     projectId: string,
     userId: string,
     roleCode: ProjectRoleCode,
+    expectedUpdatedAt: Date | undefined,
+    audit: AuditContext,
+  ): Promise<ProjectWriteResult<ProjectMemberRecord>>;
+  revokeMember(
+    scope: AuthorizedRepositoryScope,
+    projectId: string,
+    userId: string,
+    expectedUpdatedAt: Date | undefined,
+    revokedByUserId: string,
     audit: AuditContext,
   ): Promise<ProjectWriteResult<ProjectMemberRecord>>;
   listMilestones(

@@ -67,6 +67,10 @@ export const ProjectMemberCreateBodySchema = Type.Object({
 }, { additionalProperties: false });
 export const ProjectMemberPatchBodySchema = Type.Object({
   roleCode: literalUnion(["project_lead", "project_member", "project_viewer"] as const),
+  expectedUpdatedAt: ExpectedUpdatedAt,
+}, { additionalProperties: false });
+export const ProjectMemberRevokeBodySchema = Type.Object({
+  expectedUpdatedAt: ExpectedUpdatedAt,
 }, { additionalProperties: false });
 export const MilestoneCreateBodySchema = Type.Object({
   name: Type.String({ minLength: 1, maxLength: 200 }),
@@ -83,10 +87,12 @@ export const MilestonePatchBodySchema = Type.Partial(Type.Object({
 export const DeliverableCreateBodySchema = Type.Object({
   name: Type.String({ minLength: 1, maxLength: 200 }),
   description: Type.Optional(Type.String({ maxLength: 10000 })),
+  milestoneId: Type.Optional(Type.String({ format: "uuid" })),
 }, { additionalProperties: false });
 export const DeliverablePatchBodySchema = Type.Partial(Type.Object({
   name: Type.String({ minLength: 1, maxLength: 200 }),
   description: NullableText,
+  milestoneId: Type.Union([Type.String({ format: "uuid" }), Type.Null()]),
   status: literalUnion(DELIVERABLE_STATUSES),
   expectedUpdatedAt: Type.String({ format: "date-time" }),
 }, { additionalProperties: false }), { minProperties: 1 });
@@ -102,6 +108,7 @@ export type ProjectAssignBody = Static<typeof ProjectAssignBodySchema>;
 export type ProjectTransitionBody = Static<typeof ProjectTransitionBodySchema>;
 export type ProjectMemberCreateBody = Static<typeof ProjectMemberCreateBodySchema>;
 export type ProjectMemberPatchBody = Static<typeof ProjectMemberPatchBodySchema>;
+export type ProjectMemberRevokeBody = Static<typeof ProjectMemberRevokeBodySchema>;
 export type MilestoneCreateBody = Static<typeof MilestoneCreateBodySchema>;
 export type MilestonePatchBody = Static<typeof MilestonePatchBodySchema>;
 export type DeliverableCreateBody = Static<typeof DeliverableCreateBodySchema>;

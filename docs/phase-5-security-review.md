@@ -1,30 +1,26 @@
 # Revisión de seguridad de Fase 5
 
-## Controles aprobados
+## Controles validados
 
-- autenticación Clerk y perfil local activo mediante el middleware existente;
-- permiso efectivo y scope producido por `AuthorizationService`;
-- scope SQL previo a lectura, conteo, búsqueda o paginación;
-- body TypeBox cerrado y campos contextuales protegidos;
-- contexto de organización derivado del proyecto;
-- standalone estrictamente interno, nunca público ni organizacional;
-- auditoría transaccional sin emails, teléfonos ni descripciones completas;
-- locks, estado observado, `expectedUpdatedAt`, rollback y 409;
-- sin borrado físico, URLs, almacenamiento, metadata Clerk ni identidad por email.
+- autenticación y perfil local activo;
+- permisos efectivos y scope SQL previo a consultas y mutaciones;
+- miembros revocados excluidos de identidad, scopes, tareas, listados y elegibilidad;
+- revocación histórica idempotente, con lock, actor, fecha y auditoría;
+- FK compuesta de entregable a hito del mismo proyecto y organización;
+- bodies cerrados y campos de tenant/contexto protegidos;
+- locks y `expectedUpdatedAt` con respuesta 409;
+- auditoría transaccional redactada;
+- sin borrado de usuario, Clerk, organización, tareas históricas o membresías;
+- sin tickets, comentarios, archivos, URLs ni almacenamiento nuevos.
 
-## Riesgos residuales
+## Riesgos y gates restantes
 
-1. `projects.manage` es un permiso amplio que cubre proyecto, miembros, hitos y entregables;
-   separar capacidades requeriría una migración RBAC autorizada.
-2. Revocar miembros preservando historia no es posible con el esquema actual; la ruta no se
-   expone.
-3. Entregables no pueden ligarse a hitos con integridad de proyecto; `milestoneId` se rechaza.
-4. Hitos y entregables validan estados físicos, pero no tienen historial especializado; usan
-   `audit_events`.
-5. La revisión de advisories npm depende de acceso al registro y debe quedar resuelta antes
-   de despliegue público si el entorno vuelve a bloquearla.
+1. `GestionIlvox.public` tiene físicamente 0001–0005, pero no existe
+   `drizzle.__drizzle_migrations`. Ejecutar el migrador antes de reconocer de forma segura
+   toda la historia 0000–0005 intentaría repetir migraciones.
+2. 0006–0007 están validadas, pero pendientes de despliegue explícitamente autorizado.
+3. `projects.manage` sigue agrupando proyecto, miembros, hitos y entregables.
+4. `npm audit` quedó inconcluso porque el entorno no autorizó enviar metadatos al registro.
+   Debe repetirse antes de despliegue público; no se afirma cero vulnerabilidades.
 
-## Fuera de alcance confirmado
-
-Tickets, comentarios, archivos, SLA, notificaciones, contactos, invitaciones, organizaciones
-Clerk, proyectos standalone y Fase 6.
+No se ejecutó `audit fix`, `drizzle-kit push`, reconocimiento de baseline, commit ni push.

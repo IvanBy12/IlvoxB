@@ -38,7 +38,8 @@ function scopePredicate(scope: AuthorizedRepositoryScope, startIndex: number): P
       OR EXISTS (SELECT 1 FROM tickets t WHERE t.id=f.ticket_id AND t.organization_id=f.organization_id
         AND (t.requester_user_id=$${actorIndex} OR t.assigned_to_user_id=$${actorIndex}))
       OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id=f.project_id
-        AND pm.organization_id=f.organization_id AND pm.user_id=$${actorIndex})
+        AND pm.organization_id=f.organization_id AND pm.user_id=$${actorIndex}
+        AND pm.status='active')
       OR EXISTS (SELECT 1 FROM tasks ta WHERE ta.id=f.task_id AND ta.organization_id=f.organization_id
         AND ta.assigned_to_user_id=$${actorIndex})
       OR EXISTS (SELECT 1 FROM ticket_comments tc JOIN tickets t ON t.id=tc.ticket_id
@@ -46,7 +47,7 @@ function scopePredicate(scope: AuthorizedRepositoryScope, startIndex: number): P
         AND tc.organization_id=f.organization_id
         AND (t.requester_user_id=$${actorIndex} OR t.assigned_to_user_id=$${actorIndex}))
       OR EXISTS (SELECT 1 FROM deliverables d JOIN project_members pm ON pm.project_id=d.project_id
-        AND pm.organization_id=d.organization_id WHERE d.id=f.deliverable_id
+        AND pm.organization_id=d.organization_id AND pm.status='active' WHERE d.id=f.deliverable_id
         AND d.organization_id=f.organization_id AND pm.user_id=$${actorIndex})
     )`,
     values: [[...scope.organizationIds], scope.actorId],

@@ -48,12 +48,43 @@ try {
     FROM pg_namespace
     WHERE nspname LIKE 'ilvox_validation_%'
        OR nspname LIKE 'ilvox_phase45_%'
+       OR nspname LIKE 'ilvox_phase5_closure_%'
+  `);
+  const phase5ClosureArtifacts = await client.query(`
+    SELECT
+      (SELECT count(*)::integer
+       FROM information_schema.columns
+       WHERE table_schema='public'
+         AND (
+           (table_name='project_members'
+            AND column_name IN ('status','revoked_at','revoked_by_user_id'))
+           OR
+           (table_name='deliverables' AND column_name='milestone_id')
+         )) AS columns,
+      (SELECT count(*)::integer
+       FROM pg_indexes
+       WHERE schemaname='public'
+         AND indexname IN ('idx_project_members_active_user','idx_deliverables_milestone')) AS indexes
   `);
   result = buildConstraintAudit({
     exportedSql: drizzle.stdout,
     physicalConstraints: constraints.rows,
     duplicatePhysicalIndexes: duplicateIndexes.rows.map((row) => row.index_names),
     validationSchemas: validationSchemas.rows[0].count,
+    phase5ClosureArtifacts: phase5ClosureArtifacts.rows[0],
+    allowedPendingConstraints: {
+      checks: [
+        "chk_project_members_revocation",
+        "chk_project_members_status",
+      ],
+      foreignKeys: [
+        "fk_deliverables_milestone_project",
+        "project_members_revoked_by_user_id_fkey",
+      ],
+      uniqueConstraints: [
+        "uq_project_milestones_id_project_organization",
+      ],
+    },
   });
   await client.query("ROLLBACK");
 } finally {

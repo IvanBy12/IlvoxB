@@ -1,23 +1,20 @@
 # Readiness para Fase 6
 
-Estado: Fase 5 aprobada con condiciones; Fase 6 no iniciada.
+Estado: Fase 5 cerrada con condiciones. Fase 6 no iniciada.
 
-La base para una fase posterior queda preparada con:
+La historia Drizzle completa 0000-0007 esta reconocida en
+`GestionIlvox.public`; 0006 y 0007 fueron aplicadas por el migrador oficial y
+el segundo migrate fue no-op. El catalogo final, los smokes reales y las
+regresiones aprobaron. Por ello el entorno local esta tecnicamente preparado
+para que el alcance de Fase 6 se evalue en una tarea y autorizacion separadas.
 
-- proyectos tenant-bound y scopes SQL;
-- membresía de proyecto y roles físicos;
-- hitos y entregables de proyecto;
-- tareas de proyecto y standalone internas;
-- máquinas de estado, auditoría y concurrencia;
-- OpenAPI 0.5.0 y pruebas PostgreSQL.
+Antes de despliegue publico:
 
-Condiciones antes de aprobar Fase 6:
+1. ejecutar `npm audit --omit=dev` y `npm audit` con egress expresamente
+   autorizado;
+2. resolver cualquier advisory segun riesgo, sin `audit fix --force`;
+3. repetir backup, paridad, reconocimiento y migraciones por cada entorno;
+4. confirmar que no exista drift ni historia parcial.
 
-1. resolver o aceptar explícitamente la revisión npm antes del despliegue público;
-2. decidir si se autorizan las migraciones propuestas para revocación de miembros y relación
-   entregable–hito;
-3. diseñar tickets, comentarios y archivos como agregados completos, sin reutilizar
-   `organization_id=NULL` como scope;
-4. no conectar frontend hasta una decisión separada.
-
-Este documento no autoriza implementación ni migraciones de Fase 6.
+Este documento no autoriza implementar tickets, comentarios, archivos,
+frontend ni otra funcionalidad de Fase 6.

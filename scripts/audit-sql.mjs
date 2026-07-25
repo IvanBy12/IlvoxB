@@ -106,14 +106,29 @@ if (!sqlPath) {
     } finally {
       await client.end().catch(() => undefined);
     }
-    const currentOk =
-      currentDatabase.tables === 19 &&
-      currentDatabase.columns === 204 &&
-      currentDatabase.foreign_keys === 43 &&
-      currentDatabase.checks === 57 &&
-      currentDatabase.unique_constraints === 15 &&
-      currentDatabase.explicit_indexes === 54;
-    console.log(JSON.stringify({ sourceSql: result, currentDatabase, currentOk }, null, 2));
+    const expectedPhase45 = {
+      tables: 19,
+      columns: 204,
+      foreign_keys: 43,
+      checks: 57,
+      unique_constraints: 15,
+      explicit_indexes: 54,
+    };
+    const expectedPhase5Closure = {
+      tables: 19,
+      columns: 208,
+      foreign_keys: 45,
+      checks: 59,
+      unique_constraints: 16,
+      explicit_indexes: 56,
+    };
+    const phase = JSON.stringify(currentDatabase) === JSON.stringify(expectedPhase45)
+      ? "phase45"
+      : JSON.stringify(currentDatabase) === JSON.stringify(expectedPhase5Closure)
+        ? "phase5_closure"
+        : "drift";
+    const currentOk = phase !== "drift";
+    console.log(JSON.stringify({ sourceSql: result, currentDatabase, phase, currentOk }, null, 2));
     if (!currentOk) process.exitCode = 1;
   }
 }

@@ -38,6 +38,7 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 3 PostgreSQL behavior", ()
       "0001_phase3-rbac-separation.sql",
       "0002_phase3-file-audience.sql",
       "0003_phase3-clerk-event-idempotency.sql",
+      "0006_phase5-member-revocation.sql",
     ]) {
       await admin.query(readFileSync(resolve("drizzle", "migrations", name), "utf8")
         .replaceAll("--> statement-breakpoint", ""));

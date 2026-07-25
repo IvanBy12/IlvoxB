@@ -1,17 +1,15 @@
 # ILVOX Backend
 
-Backend de ILVOX construido con Node.js, TypeScript, Fastify, Drizzle ORM y PostgreSQL.
+Backend Node.js, TypeScript, Fastify, Drizzle ORM y PostgreSQL.
 
-Las Fases 3–3.5 incorporan Clerk, perfil local, `ActorContext`, autorización contextual,
-scopes SQL, `/me`, webhooks idempotentes y audiencia de archivos. Fases 4–4.5 añaden
-catálogo administrable, leads, conversión standalone y organizaciones opcionales. Fase 5
-añade proyectos tenant-bound, miembros, hitos, entregables y tareas de proyecto o standalone
-internas usando `/api/v1`.
+Fase 5 incluye proyectos ligados a organizaciones, miembros con revocacion
+historica, hitos, entregables opcionalmente ligados a hitos y tareas de proyecto
+o standalone internas.
 
 ## Requisitos
 
 - Node.js 22 o superior.
-- PostgreSQL 18.x; la versión runtime validada oficialmente es PostgreSQL 18.4.
+- PostgreSQL 18.x; runtime validado: PostgreSQL 18.4.
 
 ## Inicio local
 
@@ -21,39 +19,33 @@ npm install
 npm run dev
 ```
 
-## Validación
+## Validacion
 
 ```powershell
-npm run check
-npm run audit:sql -- C:\ruta\ilvox_complete_reconstructed.sql
-npm run audit:rbac -- C:\ruta\ilvox_complete_reconstructed.sql
-npm run audit:parity -- C:\ruta\ilvox_complete_reconstructed.sql
-npm run audit:constraint-names
-npm run db:validate:phase3 -- --database-url
-npm run db:validate:phase45 -- --database-url
-npm run test:database -- --database-url
-npm run smoke:phase45:public
-npm run openapi:phase5
+npm.cmd run check
+npm.cmd run db:check
+npm.cmd run audit:sql -- drizzle\baseline\0000_ilvox_complete_reconstructed.sql
+npm.cmd run audit:rbac -- drizzle\baseline\0000_ilvox_complete_reconstructed.sql
+npm.cmd run audit:parity -- drizzle\baseline\0000_ilvox_complete_reconstructed.sql
+npm.cmd run audit:constraint-names
+npm.cmd run db:validate:runtime -- --database-url
+npm.cmd run db:validate:phase3 -- --database-url
+npm.cmd run db:validate:phase45 -- --database-url
+npm.cmd run db:validate:phase5-closure -- --database-url
+npm.cmd run test:database -- --database-url
+npm.cmd run smoke:phase5:operational
+npm.cmd run openapi:phase5
 ```
 
-La API está descrita en `docs/phase-5-api.md` y `docs/openapi.json` (0.5.0, 43 operaciones).
-Las organizaciones son opcionales para el MVP general, pero los proyectos continúan ligados
-a una organización. Las tareas standalone son privadas e internas. No existen contactos
-empresariales ni invitaciones en este alcance.
+La API esta en `docs/openapi.json` (0.5.1, 44 operaciones). El cierre operativo
+y sus evidencias estan en `docs/phase-5-operational-deployment.md`.
 
-La baseline exacta está en `drizzle/baseline/`. Antes de usar migraciones, siga
-`docs/database-parity.md`: la migración `0000` es una guarda de seguridad y falla
-deliberadamente mientras el entorno no haya reconocido la baseline.
+La baseline exacta esta en `drizzle/baseline/`. No use `drizzle-kit push`.
+La base local `GestionIlvox.public` reconoce 0000-0007; 0000-0005 fueron
+reconocidas sin reaplicar su DDL y el migrador oficial aplico solo 0006-0007.
+Para auditar o repetir el procedimiento en otro entorno, use
+`npm run db:operate:phase5 -- inspect` y siga
+`docs/drizzle-history-recognition.md`.
 
-Las migraciones deben validarse en esquemas temporales; no use `drizzle-kit push`. Las
-migraciones 0004–0005 están versionadas, aplicadas sobre `GestionIlvox.public` y validadas con
-smoke tests reales. El resultado de despliegue está en
-`docs/phase-4-5-deployment-results.md`.
-
-Fase 5 no añade migraciones. Las propuestas no aplicadas para revocación histórica de
-miembros y relación entregable–hito están en `docs/phase-5-implementation.md`.
-
-PostgreSQL 16 no fue probado ni está soportado oficialmente, pero no es un gate. Cualquier
-versión fuera de PostgreSQL 18.x requiere revalidación completa. La auditoría npm del cierre
-local quedó inconclusa por falta de acceso autorizado al registro y debe repetirse antes del
-despliegue público.
+Fase 5 esta cerrada con la condicion de completar `npm audit` antes de
+despliegue publico. Fase 6 no fue iniciada.

@@ -1,32 +1,24 @@
 # API de Fase 5
 
-Base: `/api/v1`. Todas las operaciones requieren sesión Clerk válida, perfil local activo,
-permiso efectivo y scope SQL. La respuesta conserva el envelope común `data`/`error`.
+Base: `/api/v1`. Todas las operaciones requieren sesión válida, perfil local activo, permiso
+efectivo y scope SQL. El contrato completo está en `openapi.json`, versión 0.5.1, con 44
+operaciones totales y 24 de Fase 5.
 
-## Proyectos
-
-| Método | Ruta | Permiso | Regla principal |
-| --- | --- | --- | --- |
-| GET | `/projects` | `projects.read` | scope en consulta y conteo; paginación/filtros |
-| POST | `/projects` | `projects.manage` | organización obligatoria; estado `planning` |
-| GET | `/projects/:projectId` | `projects.read` | 404 si falta o está fuera de scope |
-| PATCH | `/projects/:projectId` | `projects.manage` | solo datos generales |
-| POST | `/projects/:projectId/assign` | `projects.manage` | responsable interno activo |
-| POST | `/projects/:projectId/transition` | `projects.manage` | máquina central y lock |
-
-Filtros: `search`, `status`, `organizationId`, `leadUserId`, `startFrom`, `dueTo`.
-Orden: `createdAt|updatedAt|name|startDate|dueDate`, `asc|desc`.
-
-## Miembros
+## Proyectos y miembros
 
 | Método | Ruta | Permiso |
 | --- | --- | --- |
-| GET | `/projects/:projectId/members` | `projects.read` |
-| POST | `/projects/:projectId/members` | `projects.manage` |
+| GET/POST | `/projects` | `projects.read` / `projects.manage` |
+| GET/PATCH | `/projects/:projectId` | `projects.read` / `projects.manage` |
+| POST | `/projects/:projectId/assign` | `projects.manage` |
+| POST | `/projects/:projectId/transition` | `projects.manage` |
+| GET/POST | `/projects/:projectId/members` | `projects.read` / `projects.manage` |
 | PATCH | `/projects/:projectId/members/:memberId` | `projects.manage` |
+| POST | `/projects/:projectId/members/:memberId/revoke` | `projects.manage` |
 
-Roles aceptados: `project_lead`, `project_member`, `project_viewer`. PATCH cambia solo rol.
-No existe revocación porque el esquema no puede preservarla.
+Los roles aceptados son `project_lead`, `project_member` y `project_viewer`. El cambio de rol
+acepta `expectedUpdatedAt`. La revocación acepta opcionalmente `expectedUpdatedAt`, preserva
+historial y es idempotente; los listados operativos muestran solo miembros activos.
 
 ## Hitos y entregables
 
@@ -37,36 +29,23 @@ No existe revocación porque el esquema no puede preservarla.
 | GET/POST | `/projects/:projectId/deliverables` |
 | GET/PATCH | `/projects/:projectId/deliverables/:deliverableId` |
 
-Lectura requiere `projects.read`; escritura, `projects.manage`. Organización se deriva del
-proyecto. Hitos se limitan al rango de fechas del proyecto. Entregables no aceptan
-`milestoneId`, archivos ni URLs.
+Lectura requiere `projects.read`; escritura requiere `projects.manage`. `milestoneId` es
+opcional en un entregable. En PATCH, un UUID asigna/cambia el hito y `null` lo retira. La API
+responde 404 si el hito no existe o no pertenece al proyecto autorizado; la base de datos
+también impide vínculos entre proyectos u organizaciones.
 
 ## Tareas
 
-| Método | Ruta | Regla principal |
-| --- | --- | --- |
-| GET | `/tasks` | scope en consulta/conteo; excluye tickets |
-| POST | `/tasks` | proyecto opcional; sin proyecto crea standalone interna |
-| GET | `/tasks/:taskId` | 404 si falta o está fuera de scope |
-| PATCH | `/tasks/:taskId` | datos generales; contexto protegido |
-| POST | `/tasks/:taskId/assign` | elegibilidad contextual |
-| POST | `/tasks/:taskId/transition` | máquina central y lock |
+Las rutas `GET/POST /tasks`, `GET/PATCH /tasks/:taskId`, `/assign` y `/transition` mantienen
+los filtros y scopes de Fase 5. Las tareas de ticket se excluyen. Una tarea standalone solo
+puede ser creada o vista por actores internos según permiso y scope; un miembro revocado deja
+de obtener acceso derivado al proyecto.
 
-Filtros: `search`, `status`, `organizationId`, `projectId`, `assignedToUserId`,
-`createdByUserId`, `dueFrom`, `dueTo`. Orden:
-`createdAt|updatedAt|title|dueDate`, `asc|desc`.
+## Errores
 
-POST no acepta `ticketId` ni `organizationId`. El assignee inicial es obligatorio porque
-`tasks.assigned_to_user_id` es `NOT NULL`.
-
-## Errores y concurrencia
-
-- 400: formato, body cerrado, estado/fecha/usuario no elegible.
+- 400: formato, body cerrado, estado, fecha o usuario no elegible.
 - 401: no autenticado.
 - 403: permiso o modalidad standalone denegados.
 - 404: inexistente o fuera de scope.
-- 409: transición, terminal, duplicado o `expectedUpdatedAt` obsoleto.
-- 500/503: error interno o indisponibilidad real según el manejador común.
-
-El contrato completo, schemas y estados están en `openapi.json`, versión 0.5.0, con
-exactamente 43 operaciones totales.
+- 409: duplicado, estado terminal, transición o versión obsoleta.
+- 500/503: fallo interno o indisponibilidad real.

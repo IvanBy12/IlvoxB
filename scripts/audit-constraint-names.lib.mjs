@@ -70,6 +70,8 @@ export function buildConstraintAudit({
   physicalConstraints,
   duplicatePhysicalIndexes,
   validationSchemas,
+  allowedPendingConstraints = {},
+  phase5ClosureArtifacts,
 }) {
   const expected = extractExportedConstraintNames(exportedSql);
   const actualByType = Object.fromEntries(
@@ -85,6 +87,38 @@ export function buildConstraintAudit({
       compareConstraintNames(actualByType[key], expected[key]),
     ]),
   );
+  const pendingByType = Object.fromEntries(
+    Object.keys(CONSTRAINT_TYPES).map((key) => [
+      key,
+      sortedUnique(allowedPendingConstraints[key] ?? []),
+    ]),
+  );
+  const pendingStateByType = Object.fromEntries(
+    Object.keys(CONSTRAINT_TYPES).map((key) => {
+      const comparison = comparisons[key];
+      const allowed = pendingByType[key];
+      const fullyApplied =
+        comparison.missingInDatabase.length === 0 &&
+        comparison.unexpectedInDatabase.length === 0;
+      const fullyPending =
+        allowed.length > 0 &&
+        comparison.unexpectedInDatabase.length === 0 &&
+        comparison.missingInDatabase.length === allowed.length &&
+        comparison.missingInDatabase.every((name, index) => name === allowed[index]);
+      return [key, fullyApplied ? "applied" : fullyPending ? "pending" : "drift"];
+    }),
+  );
+  const pendingStates = Object.values(pendingStateByType);
+  const pendingMode =
+    pendingStates.every((state) => state === "applied")
+      ? "applied"
+      : pendingStates.every((state, index) =>
+          pendingByType[Object.keys(CONSTRAINT_TYPES)[index]].length === 0
+            ? state === "applied"
+            : state === "pending",
+        )
+        ? "phase5_closure_pending"
+        : "drift";
   const leadConstraints = physicalConstraints.filter(
     (constraint) =>
       constraint.contype === "c" &&
@@ -94,11 +128,19 @@ export function buildConstraintAudit({
     count: leadConstraints.length,
     phase: classifyLeadConversionCheck(leadConstraints[0]?.definition),
   };
-  const comparisonsMatch = Object.values(comparisons).every(
-    (comparison) =>
-      comparison.missingInDatabase.length === 0 &&
-      comparison.unexpectedInDatabase.length === 0,
-  );
+  const phase5ArtifactMode =
+    phase5ClosureArtifacts === undefined
+      ? "not_checked"
+      : phase5ClosureArtifacts.columns === 0 && phase5ClosureArtifacts.indexes === 0
+        ? "pending"
+        : phase5ClosureArtifacts.columns === 4 && phase5ClosureArtifacts.indexes === 2
+          ? "applied"
+          : "drift";
+  const phase5StateMatches =
+    phase5ArtifactMode === "not_checked" ||
+    (pendingMode === "phase5_closure_pending" && phase5ArtifactMode === "pending") ||
+    (pendingMode === "applied" && phase5ArtifactMode === "applied");
+  const comparisonsMatch = pendingMode !== "drift" && phase5StateMatches;
   const ok =
     comparisonsMatch &&
     expected.duplicateNames.length === 0 &&
@@ -116,6 +158,11 @@ export function buildConstraintAudit({
       duplicateNames: expected.duplicateNames,
     },
     ...comparisons,
+    pendingMode,
+    pendingStateByType,
+    phase5ClosureArtifacts: phase5ClosureArtifacts === undefined
+      ? { mode: phase5ArtifactMode }
+      : { ...phase5ClosureArtifacts, mode: phase5ArtifactMode },
     leadConversionCheck,
     duplicatePhysicalIndexes,
     validationSchemas,

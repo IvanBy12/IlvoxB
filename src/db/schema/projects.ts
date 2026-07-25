@@ -94,6 +94,11 @@ export const projectMembers = pgTable(
       .notNull()
       .default("project"),
     assignedByUserId: uuid("assigned_by_user_id"),
+    status: varchar("status", { length: 20, enum: ["active", "revoked"] })
+      .notNull()
+      .default("active"),
+    revokedAt: timestampWithTimezone("revoked_at"),
+    revokedByUserId: uuid("revoked_by_user_id"),
     joinedAt: timestampWithTimezone("joined_at").notNull().defaultNow(),
     createdAt: timestampWithTimezone("created_at").notNull().defaultNow(),
     updatedAt: timestampWithTimezone("updated_at").notNull().defaultNow(),
@@ -109,7 +114,12 @@ export const projectMembers = pgTable(
       name: "project_members_assigned_by_user_id_fkey",
       columns: [table.assignedByUserId],
       foreignColumns: [appUsers.id],
-    }).onDelete("restrict"),
+    }).onDelete("restrict").onUpdate("no action"),
+    foreignKey({
+      name: "project_members_revoked_by_user_id_fkey",
+      columns: [table.revokedByUserId],
+      foreignColumns: [appUsers.id],
+    }).onDelete("restrict").onUpdate("no action"),
     foreignKey({
       name: "fk_project_members_project",
       columns: [table.projectId, table.organizationId],
@@ -121,7 +131,22 @@ export const projectMembers = pgTable(
       foreignColumns: [roles.id, roles.scope],
     }).onDelete("restrict"),
     check("chk_project_members_scope", sql`${table.roleScope} = 'project'`),
+    check(
+      "chk_project_members_status",
+      sql`${table.status} IN ('active', 'revoked')`,
+    ),
+    check(
+      "chk_project_members_revocation",
+      sql`(
+        (${table.status} = 'active' AND ${table.revokedAt} IS NULL AND ${table.revokedByUserId} IS NULL)
+        OR
+        (${table.status} = 'revoked' AND ${table.revokedAt} IS NOT NULL AND ${table.revokedByUserId} IS NOT NULL)
+      )`,
+    ),
     index("idx_project_members_user").on(table.userId),
+    index("idx_project_members_active_user")
+      .on(table.userId, table.projectId)
+      .where(sql`${table.status} = 'active'`),
     index("idx_project_members_role_scope").on(table.roleId, table.roleScope),
     index("idx_project_members_assigned_by").on(table.assignedByUserId),
   ],
@@ -148,6 +173,11 @@ export const projectMilestones = pgTable(
   },
   (table) => [
     unique("uq_project_milestones_id_organization").on(table.id, table.organizationId),
+    unique("uq_project_milestones_id_project_organization").on(
+      table.id,
+      table.projectId,
+      table.organizationId,
+    ),
     foreignKey({
       name: "fk_project_milestones_project",
       columns: [table.projectId, table.organizationId],
@@ -176,6 +206,7 @@ export const deliverables = pgTable(
     id: uuid("id").default(sql`gen_random_uuid()`).primaryKey(),
     projectId: uuid("project_id").notNull(),
     organizationId: uuid("organization_id").notNull(),
+    milestoneId: uuid("milestone_id"),
     name: varchar("name", { length: 200 }).notNull(),
     description: text("description"),
     status: varchar("status", {
@@ -201,6 +232,15 @@ export const deliverables = pgTable(
       columns: [table.projectId, table.organizationId],
       foreignColumns: [projects.id, projects.organizationId],
     }).onDelete("restrict"),
+    foreignKey({
+      name: "fk_deliverables_milestone_project",
+      columns: [table.milestoneId, table.projectId, table.organizationId],
+      foreignColumns: [
+        projectMilestones.id,
+        projectMilestones.projectId,
+        projectMilestones.organizationId,
+      ],
+    }).onDelete("restrict").onUpdate("no action"),
     check(
       "chk_deliverables_status",
       sql`${table.status} IN ('pending', 'in_review', 'delivered', 'approved', 'rejected')`,
@@ -214,6 +254,7 @@ export const deliverables = pgTable(
       )`,
     ),
     index("idx_deliverables_project_status").on(table.projectId, table.status),
+    index("idx_deliverables_milestone").on(table.milestoneId),
     index("idx_deliverables_approved_by").on(table.approvedByUserId),
   ],
 );

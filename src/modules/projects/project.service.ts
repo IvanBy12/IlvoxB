@@ -123,6 +123,7 @@ export class ProjectService {
     projectId: string,
     userId: string,
     roleCode: ProjectRoleCode,
+    expectedUpdatedAt: Date | undefined,
     audit: AuditContext,
   ) {
     return this.unwrap(this.repository.updateMember(
@@ -130,6 +131,24 @@ export class ProjectService {
       projectId,
       userId,
       roleCode,
+      expectedUpdatedAt,
+      audit,
+    ));
+  }
+
+  revokeMember(
+    actor: ActorContext,
+    projectId: string,
+    userId: string,
+    expectedUpdatedAt: Date | undefined,
+    audit: AuditContext,
+  ) {
+    return this.unwrap(this.repository.revokeMember(
+      this.scope(actor, "projects.manage"),
+      projectId,
+      userId,
+      expectedUpdatedAt,
+      actor.localUserId,
       audit,
     ));
   }

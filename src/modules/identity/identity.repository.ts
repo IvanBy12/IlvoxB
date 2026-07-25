@@ -63,7 +63,7 @@ export class PostgresIdentityRepository implements IdentityRepository {
          FROM project_members pm
          JOIN projects pr ON pr.id = pm.project_id AND pr.organization_id = pm.organization_id
          JOIN roles r ON r.id = pm.role_id
-         WHERE pm.user_id = $1 AND r.scope = 'project'
+         WHERE pm.user_id = $1 AND pm.status = 'active' AND r.scope = 'project'
        )
        SELECT er.role_id, er.role_code, er.role_scope, er.organization_id, er.project_id,
               p.code AS permission_code

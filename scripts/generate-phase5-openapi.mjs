@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 
 const target = resolve("docs", "openapi.json");
 const document = JSON.parse(await readFile(target, "utf8"));
-document.info.version = "0.5.0";
+document.info.version = "0.5.1";
 document.info.description =
-  "Contrato implementado de Fase 5: proyectos ligados a organizaciones, miembros, hitos, entregables y tareas internas o de proyecto. No incluye tickets, comentarios ni archivos.";
+  "Cierre de Fase 5: proyectos ligados a organizaciones, revocación histórica de miembros, hitos, entregables opcionalmente ligados a hitos y tareas internas o de proyecto. No incluye tickets, comentarios ni archivos.";
 document.tags = [
   ...document.tags.filter((tag) =>
     !["Projects", "Project Members", "Milestones", "Deliverables", "Tasks"].includes(tag.name)),
@@ -177,11 +177,24 @@ document.paths["/projects/{projectId}/members/{memberId}"] = {
     tags: ["Project Members"],
     summary: "Change a project member role",
     description:
-      "Only project_lead, project_member or project_viewer are accepted. Revocation is not exposed because the current schema cannot preserve it.",
+      "Only active members can change role. expectedUpdatedAt detects concurrent role changes.",
     permission: "projects.manage",
     scope: projectManageScope,
     parameters: [projectId, memberId],
     body: "ProjectMemberPatch",
+  }),
+};
+document.paths["/projects/{projectId}/members/{memberId}/revoke"] = {
+  post: operation({
+    tags: ["Project Members"],
+    summary: "Revoke a project member",
+    description:
+      "Locks the active membership, preserves history, records actor/time and is idempotent when already revoked. Access derived from project membership is removed immediately.",
+    permission: "projects.manage",
+    scope: projectManageScope,
+    parameters: [projectId, memberId],
+    body: "ProjectMemberRevoke",
+    conflict: true,
   }),
 };
 document.paths["/projects/{projectId}/milestones"] = {
@@ -239,7 +252,7 @@ document.paths["/projects/{projectId}/deliverables"] = {
     tags: ["Deliverables"],
     summary: "Create a project deliverable",
     description:
-      "Organization is derived from the project. Milestone association is intentionally unavailable in the current schema.",
+      "Organization is derived from the project. milestoneId is optional and must reference a milestone in the same project and organization.",
     permission: "projects.manage",
     scope: projectManageScope,
     parameters: [projectId],
@@ -261,7 +274,7 @@ document.paths["/projects/{projectId}/deliverables/{deliverableId}"] = {
     tags: ["Deliverables"],
     summary: "Update a project deliverable",
     description:
-      "Approval identity and timestamp are server-owned. expectedUpdatedAt detects concurrent updates.",
+      "Approval identity and timestamp are server-owned. milestoneId can be assigned or cleared but project and organization remain immutable. expectedUpdatedAt detects concurrent updates.",
     permission: "projects.manage",
     scope: projectManageScope,
     parameters: [projectId, deliverableId],
@@ -375,6 +388,12 @@ Object.assign(document.components.parameters, {
     required: true,
     schema: { type: "string", format: "uuid" },
   },
+  MemberId: {
+    name: "memberId",
+    in: "path",
+    required: true,
+    schema: { type: "string", format: "uuid" },
+  },
   TaskId: {
     name: "taskId",
     in: "path",
@@ -456,6 +475,14 @@ Object.assign(document.components.schemas, {
     required: ["roleCode"],
     properties: {
       roleCode: { type: "string", enum: ["project_lead", "project_member", "project_viewer"] },
+      expectedUpdatedAt: optionalTimestamp,
+    },
+  },
+  ProjectMemberRevoke: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      expectedUpdatedAt: optionalTimestamp,
     },
   },
   MilestoneCreate: {
@@ -465,6 +492,7 @@ Object.assign(document.components.schemas, {
     properties: {
       name: { type: "string", minLength: 1, maxLength: 200 },
       description: { type: "string", maxLength: 10000 },
+      milestoneId: { type: "string", format: "uuid" },
       dueDate: { type: "string", format: "date" },
     },
   },
@@ -475,6 +503,7 @@ Object.assign(document.components.schemas, {
     properties: {
       name: { type: "string", minLength: 1, maxLength: 200 },
       description: { type: ["string", "null"], maxLength: 10000 },
+      milestoneId: { type: ["string", "null"], format: "uuid" },
       status: { type: "string", enum: ["pending", "in_progress", "completed"] },
       dueDate: { type: "string", format: "date" },
       expectedUpdatedAt: optionalTimestamp,
@@ -555,6 +584,6 @@ const operationCount = Object.values(document.paths)
   .flatMap((path) => Object.keys(path))
   .filter((method) => methods.has(method))
   .length;
-if (operationCount !== 43) throw new Error(`Expected 43 operations, found ${operationCount}`);
+if (operationCount !== 44) throw new Error(`Expected 44 operations, found ${operationCount}`);
 await writeFile(target, `${JSON.stringify(document, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ version: document.info.version, operationCount }));

@@ -14,6 +14,7 @@ import {
   ProjectMemberCreateBodySchema,
   ProjectMemberParamsSchema,
   ProjectMemberPatchBodySchema,
+  ProjectMemberRevokeBodySchema,
   ProjectMilestoneParamsSchema,
   ProjectPatchBodySchema,
   ProjectTransitionBodySchema,
@@ -29,6 +30,7 @@ import {
   type ProjectMemberCreateBody,
   type ProjectMemberParams,
   type ProjectMemberPatchBody,
+  type ProjectMemberRevokeBody,
   type ProjectMilestoneParams,
   type ProjectPatchBody,
   type ProjectTransitionBody,
@@ -169,6 +171,26 @@ export const projectRoutes: FastifyPluginCallback<ProjectRoutesOptions> = (app, 
       request.params.projectId,
       request.params.memberId,
       request.body.roleCode as ProjectRoleCode,
+      request.body.expectedUpdatedAt === undefined
+        ? undefined
+        : new Date(request.body.expectedUpdatedAt),
+      auditContext(request),
+    )),
+  );
+
+  app.post<{ Params: ProjectMemberParams; Body: ProjectMemberRevokeBody }>(
+    "/projects/:projectId/members/:memberId/revoke",
+    {
+      preHandler: app.requireActor,
+      schema: { params: ProjectMemberParamsSchema, body: ProjectMemberRevokeBodySchema },
+    },
+    async (request) => successResponse(await options.service.revokeMember(
+      actor(request),
+      request.params.projectId,
+      request.params.memberId,
+      request.body.expectedUpdatedAt === undefined
+        ? undefined
+        : new Date(request.body.expectedUpdatedAt),
       auditContext(request),
     )),
   );

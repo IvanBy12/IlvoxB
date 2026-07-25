@@ -97,6 +97,7 @@ function taskScope(
           SELECT 1 FROM project_members scoped_pm
           WHERE scoped_pm.project_id = ${alias}.project_id
             AND scoped_pm.user_id = $${startAt}
+            AND scoped_pm.status = 'active'
         )
       )
     )`,
@@ -367,7 +368,8 @@ export class PostgresTaskRepository implements TaskRepository {
        FROM projects p
        WHERE p.id = $1 AND p.organization_id = ANY($2::uuid[])
          AND EXISTS (
-           SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $3
+           SELECT 1 FROM project_members pm
+           WHERE pm.project_id = p.id AND pm.user_id = $3 AND pm.status = 'active'
          )
        FOR UPDATE OF p`,
       [projectId, [...scope.organizationIds], scope.actorId],
@@ -392,7 +394,7 @@ export class PostgresTaskRepository implements TaskRepository {
     const result = await client.query(
       `SELECT 1 FROM project_members pm
        JOIN app_users u ON u.id = pm.user_id AND u.status = 'active'
-       WHERE pm.project_id = $1 AND pm.user_id = $2`,
+       WHERE pm.project_id = $1 AND pm.user_id = $2 AND pm.status = 'active'`,
       [projectId, userId],
     );
     return result.rowCount !== 0;

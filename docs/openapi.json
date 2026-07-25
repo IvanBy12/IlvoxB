@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ILVOX Backend API",
-    "version": "0.5.0",
-    "description": "Contrato implementado de Fase 5: proyectos ligados a organizaciones, miembros, hitos, entregables y tareas internas o de proyecto. No incluye tickets, comentarios ni archivos."
+    "version": "0.5.1",
+    "description": "Cierre de Fase 5: proyectos ligados a organizaciones, revocación histórica de miembros, hitos, entregables opcionalmente ligados a hitos y tareas internas o de proyecto. No incluye tickets, comentarios ni archivos."
   },
   "servers": [
     {
@@ -1382,7 +1382,7 @@
           "Project Members"
         ],
         "summary": "Change a project member role",
-        "description": "Only project_lead, project_member or project_viewer are accepted. Revocation is not exposed because the current schema cannot preserve it.",
+        "description": "Only active members can change role. expectedUpdatedAt detects concurrent role changes.",
         "security": [
           {
             "clerkSession": []
@@ -1649,7 +1649,7 @@
           "Deliverables"
         ],
         "summary": "Create a project deliverable",
-        "description": "Organization is derived from the project. Milestone association is intentionally unavailable in the current schema.",
+        "description": "Organization is derived from the project. milestoneId is optional and must reference a milestone in the same project and organization.",
         "security": [
           {
             "clerkSession": []
@@ -1739,7 +1739,7 @@
           "Deliverables"
         ],
         "summary": "Update a project deliverable",
-        "description": "Approval identity and timestamp are server-owned. expectedUpdatedAt detects concurrent updates.",
+        "description": "Approval identity and timestamp are server-owned. milestoneId can be assigned or cleared but project and organization remain immutable. expectedUpdatedAt detects concurrent updates.",
         "security": [
           {
             "clerkSession": []
@@ -2120,6 +2120,60 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TaskTransition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/projects/{projectId}/members/{memberId}/revoke": {
+      "post": {
+        "tags": [
+          "Project Members"
+        ],
+        "summary": "Revoke a project member",
+        "description": "Locks the active membership, preserves history, records actor/time and is idempotent when already revoked. Access derived from project membership is removed immediately.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "projects.manage",
+        "x-scope": "SQL: global/authorized project membership with projects.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MemberId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectMemberRevoke"
               }
             }
           }
@@ -2926,6 +2980,10 @@
               "project_member",
               "project_viewer"
             ]
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -2945,6 +3003,10 @@
           "description": {
             "type": "string",
             "maxLength": 10000
+          },
+          "milestoneId": {
+            "type": "string",
+            "format": "uuid"
           },
           "dueDate": {
             "type": "string",
@@ -2968,6 +3030,13 @@
               "null"
             ],
             "maxLength": 10000
+          },
+          "milestoneId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "status": {
             "type": "string",
@@ -3145,6 +3214,16 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          }
+        }
+      },
+      "ProjectMemberRevoke": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }
