@@ -143,6 +143,39 @@ describe("Phase 4 HTTP routes", () => {
     expect(response.json()).toMatchObject({ data: { items: [{ id: SERVICE_ID, isActive: true }] } });
   });
 
+  it("passes public service pagination and category filters to the repository", async () => {
+    const deps = dependencies(() => Promise.resolve(leadRecord));
+    const listPublic = vi.spyOn(deps.serviceCatalogRepository, "listPublic");
+    app = await buildTestApp({}, deps);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/services?page=2&pageSize=5&category=development",
+    });
+    expect(response.statusCode).toBe(200);
+    expect(listPublic).toHaveBeenCalledWith({
+      page: 2,
+      pageSize: 5,
+      category: "development",
+    });
+  });
+
+  it("returns public service detail and a neutral 404 without authentication", async () => {
+    app = await buildTestApp({}, dependencies(() => Promise.resolve(leadRecord)));
+    const found = await app.inject({
+      method: "GET",
+      url: `/api/v1/services/${SERVICE_ID}`,
+    });
+    expect(found.statusCode).toBe(200);
+    expect(found.json()).toMatchObject({ data: { id: SERVICE_ID, isPublic: true } });
+
+    const missing = await app.inject({
+      method: "GET",
+      url: "/api/v1/services/00000000-0000-4000-8000-000000000499",
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toMatchObject({ error: { code: "NOT_FOUND" } });
+  });
+
   it("forces public lead status and assignment in the service contract", async () => {
     const createPublic = vi.fn<(input: PublicLeadInput) => Promise<typeof leadRecord>>(
       () => Promise.resolve(leadRecord),
@@ -186,6 +219,71 @@ describe("Phase 4 HTTP routes", () => {
       },
     });
     expect(response.statusCode).toBe(400);
+    expect(createPublic).not.toHaveBeenCalled();
+  });
+
+  it("maps a missing selected public service to 404", async () => {
+    app = await buildTestApp({}, dependencies(() =>
+      Promise.reject(Object.assign(new Error("service_not_found"), {
+        code: "ILVOX_SERVICE_NOT_FOUND",
+      })),
+    ));
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/leads",
+      payload: {
+        fullName: "Person",
+        email: "person@example.test",
+        message: "Message",
+        source: "diagnostic",
+        serviceId: SERVICE_ID,
+      },
+    });
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ error: { code: "NOT_FOUND" } });
+  });
+
+  it("enforces the public lead rate limit and exposes Retry-After", async () => {
+    app = await buildTestApp({}, dependencies(() => Promise.resolve(leadRecord)));
+    const responses = [];
+    for (let index = 0; index < 11; index += 1) {
+      responses.push(await app.inject({
+        method: "POST",
+        url: "/api/v1/leads",
+        payload: {
+          fullName: `Person ${index}`,
+          email: `person-${index}@example.test`,
+          message: "Message",
+          source: "quotation",
+        },
+      }));
+    }
+    expect(responses.slice(0, 10).every((response) => response.statusCode === 201)).toBe(true);
+    expect(responses[10]!.statusCode, responses[10]!.body).toBe(429);
+    expect(responses[10]!.headers["retry-after"]).toBeDefined();
+    expect(responses[10]!.json()).toMatchObject({ error: { code: "RATE_LIMITED" } });
+  });
+
+  it("returns 413 before processing an oversized public lead body", async () => {
+    const createPublic = vi.fn(() => Promise.resolve(leadRecord));
+    app = await buildTestApp(
+      { BODY_LIMIT_BYTES: "1024" },
+      dependencies(createPublic),
+    );
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/leads",
+      payload: {
+        fullName: "Person",
+        email: "person@example.test",
+        message: "x".repeat(2_000),
+        source: "contact",
+      },
+    });
+    expect(response.statusCode).toBe(413);
+    expect(response.json()).toMatchObject({
+      error: { code: "PAYLOAD_TOO_LARGE" },
+    });
     expect(createPublic).not.toHaveBeenCalled();
   });
 

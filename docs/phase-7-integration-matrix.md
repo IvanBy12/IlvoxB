@@ -24,13 +24,15 @@ por PostgreSQL; no debe traducirse a un guard hardcoded.
 | `/nosotros` | Ver contenido | Constantes | — | — | No | — | public | `KEEP_STATIC` | Ninguna |
 | `/portafolio` | Ver casos | Casos y cifras hardcoded | — | — | No | — | public | `KEEP_STATIC` | Validar claims |
 | `/planes` | Ver planes | Precios/features hardcoded | — | — | No | — | public | `KEEP_STATIC` | Retirar promesa SLA |
-| `/servicios` | Listar catálogo | `detalle` hardcoded | `/api/v1/services` | GET | No | — | public | `READY_WITH_ADAPTATION` | Paginación, categorías, loading y empty |
-| Sin pantalla | Detalle público | No existe ruta | `/api/v1/services/:serviceId` | GET | No | — | public | `FRONTEND_MISSING` | Crear ruta o decidir no usarla |
-| `/contacto`, `/diagnostico`, `/cotizacion` | Enviar lead | Mutación en memoria | `/api/v1/leads` | POST | No | — | public | `READY_WITH_ADAPTATION` | Campos, `serviceId`, sources, pending y 429 |
-| `/login` | Iniciar sesión | Clerk o demo | Clerk | SDK | Clerk | — | — | `READY_WITH_ADAPTATION` | Quitar demo y redirects por rol mock |
-| `/login` | Registro/Google/recuperación/verificación | `SignIn`; `signUpUrl` apunta a login | Clerk | SDK | Clerk | — | — | `READY_WITH_ADAPTATION` | Configurar flujos y rutas/redirects explícitos |
-| Providers/layouts | Cargar perfil local | Seed/metadata | `/me` | GET | Bearer Clerk | Perfil local `active` | SQL | `FRONTEND_MISSING` | Fuente de sesión, roles, permisos y memberships |
-| Layouts | Logout | Store + Clerk | Clerk | SDK | Clerk | — | — | `READY_DIRECT` | Limpiar query cache y memoria sensible |
+| `/servicios` | Listar catálogo | API real | `/api/v1/services` | GET | No | — | public | `IMPLEMENTED_7_2` | Paginación, categoría, loading, empty, error y retry |
+| `/servicios/:serviceId` | Detalle público | API real | `/api/v1/services/:serviceId` | GET | No | — | public | `IMPLEMENTED_7_2` | Descripción segura, 404 neutral y CTA |
+| `/contacto`, `/diagnostico`, `/cotizacion` | Enviar lead | API real | `/api/v1/leads` | POST | No | — | public | `IMPLEMENTED_7_2` | UUID opcional, source tipado, pending, errores y 429 |
+| `/login` | Iniciar sesión por email + contraseña o código | Clerk `SignIn` | Clerk | SDK | Clerk | — | — | `IMPLEMENTED_7_3` | Modo restringido, sin signup ni OAuth |
+| `/login/*` | Recuperación/verificación aprobada | Clerk `SignIn` | Clerk | SDK | Clerk | — | — | `IMPLEMENTED_7_3` | Flujo prebuilt; subrutas de registro devuelven 404 neutral |
+| `/invitacion/aceptar` | Aceptar invitación oficial | `__clerk_ticket` | Clerk | SDK ticket | Clerk | — | — | `IMPLEMENTED_7_3` | Credenciales únicamente; roles/org/status pertenecen a PostgreSQL |
+| `/signup`, `/sign-up`, `/registro`, `/register` | Registro público | No existe | — | — | — | — | — | `REMOVED_7_3` | 404 neutral; acceso cerrado por invitación |
+| Providers/layouts | Cargar perfil local | `/me` | `/me` | GET | Bearer Clerk | Perfil local `active` | SQL | `IMPLEMENTED_7_3` | Estados no sincronizado, pendiente e inactivo separados |
+| Layouts | Logout | Clerk + QueryClient | Clerk | SDK | Clerk | — | — | `IMPLEMENTED_7_3` | Cancela y limpia cache; cambio de usuario también limpia |
 
 ## Operaciones de servicios y leads
 
@@ -167,5 +169,57 @@ con capacidad interna y cliente, bloquearon el deep link tras logout y
 mostraron una salida 404 neutral para `/app/auditoria`. La navegación mantuvo
 ocultos Documentos, Notificaciones, Auditoría y RBAC.
 
-La prueba no cambió el estado de ningún módulo funcional de esta matriz. El
-fixture temporal se retiró totalmente y Fase 7.2 permanece `NOT_STARTED`.
+En el cierre histórico de 7.1, la prueba no cambió el estado de ningún módulo
+funcional de esta matriz. El fixture temporal se retiró totalmente y Fase 7.2
+permanecía `NOT_STARTED` antes de su autorización posterior.
+
+## Estado aplicado en Fase 7.2
+
+El catálogo, detalle público y los tres formularios dejaron de usar mocks como
+autoridad. Las peticiones públicas no solicitan token Clerk. El POST no se
+reintenta automáticamente y omite todos los campos internos.
+
+El smoke creó un servicio publicado y 21 leads sintéticos `PHASE72_SMOKE_*`,
+incluyendo la validación controlada de rate limit. Confirmó los tres sources,
+el mismo UUID real, cero organizaciones/proyectos nuevos y limpieza final con
+0 servicios y 0 leads residuales.
+
+Los módulos internos, portal, administración, organizaciones, proyectos,
+tareas, tickets y comentarios no cambiaron.
+
+## Estado aplicado en Fase 7.3
+
+Clerk quedó en modo restringido en la instancia de desarrollo Hobby. El login
+efectivo muestra únicamente email/contraseña, el código por email permanece
+habilitado y no existen conexiones sociales ni SSO configuradas. No se usaron
+allowlist, producción ni capacidades Pro.
+
+El frontend no expone registro público y solo acepta altas por
+`/invitacion/aceptar?__clerk_ticket=...`. La pantalla no solicita ni envía roles,
+organizaciones, status, permisos o metadata. `/me` distingue consistencia
+eventual, acceso pendiente e inactividad; el retry automático se limita al
+perfil todavía no sincronizado.
+
+El webhook existente continúa siendo el único puente de identidad y fue
+validado para firma, idempotencia, concurrencia, orden y tombstone. La autoridad
+de acceso permanece en PostgreSQL. Fase 7.4 permanece `NOT_STARTED`.
+
+## Estado aplicado en Fase 7.4
+
+| Superficie | Contrato | Estado 7.4 | Evidencia |
+| --- | --- | --- | --- |
+| Contexto portal | `GET /me` | `IMPLEMENTED` | 0/1/múltiples, cambio y limpieza de cache |
+| Nombre organización | `GET /organizations/:id` | `IMPLEMENTED_WITH_FALLBACK` | nombre real o etiqueta neutra si no hay lectura |
+| Proyectos | `GET /projects`, `GET /projects/:id` | `IMPLEMENTED` | filtros/paginación servidor, 404 neutral, cross-tenant |
+| Hitos | `GET /projects/:id/milestones` | `IMPLEMENTED` | consulta separada, vacío/error parcial/retry |
+| Entregables | `GET /projects/:id/deliverables` | `IMPLEMENTED` | consulta separada, estado real, sin avance ficticio |
+| Tickets | `GET|POST /tickets`, `GET /tickets/:id` | `IMPLEMENTED` | standalone/org/proyecto, `requestedPriority`, sin requester |
+| Comentarios cliente | `GET|POST /tickets/:id/comments` | `IMPLEMENTED_FAIL_CLOSED` | POST client, actor no interno sin internos, dual no consulta desde portal |
+| Confirmar/rechazar | `POST /tickets/:id/confirm` | `IMPLEMENTED` | permiso+estado, motivo, `expectedUpdatedAt`, 409 |
+| Reabrir | `POST /tickets/:id/reopen` | `IMPLEMENTED` | closed, motivo, `expectedUpdatedAt`, 409 |
+| Funciones sin contrato de fase | ninguno | `HIDDEN` | archivos, tareas, notificaciones, auditoría, RBAC, SLA, billing, chat, métricas |
+
+El portal no usa `AppStore`, seeds ni filtros locales de tenant. Standalone se
+activa únicamente cuando `/me` devuelve cero organizaciones, pues el contrato
+de listado no ofrece un filtro nullable. La autorización continúa en IlvoxB y
+PostgreSQL; `PermissionGate` no se considera barrera de seguridad.

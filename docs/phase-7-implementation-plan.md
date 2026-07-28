@@ -187,45 +187,61 @@ responsive móvil y navegación con teclado.
 
 ### Objetivo
 
-Completar login, registro, Google OAuth, recuperación, verificación, redirects, sesión y
-logout sobre Clerk, con autorización visual basada en `/me`.
+Cerrar una autenticación privada por invitación sobre Clerk, sin registro público,
+OAuth social ni Clerk Organizations. Clerk mantiene identidad, credenciales y sesión;
+PostgreSQL conserva la autoridad exclusiva sobre activación, roles, memberships,
+permisos y scopes.
 
 ### Archivos esperados
 
-- `pages/public/Login.tsx` y rutas Clerk aprobadas.
+- `pages/public/Login.tsx` sin enlace ni ruta de registro público.
+- `pages/public/InvitationAcceptance.tsx` para tickets oficiales de Clerk.
 - `AuthProvider.tsx`, `ProtectedRoute.tsx`, `PermissionGate.tsx`.
-- Estado de “Clerk loading”, “perfil local pendiente/no activo” y sesión vencida.
-- Opcional pantalla de perfil Clerk; no crear perfil de negocio ficticio.
+- Estados separados de perfil no sincronizado, pendiente e inactivo.
+- Políticas de redirects locales, retry acotado y mensajes seguros de invitación.
+- Webhook `user.created`, `user.updated` y `user.deleted` como único puente hacia
+  `app_users`.
 
 ### Dependencias
 
-7.1 completada y Clerk configurado en frontend/backend. Webhook de sincronización operativo.
+7.1 y 7.2 completadas. Instancia Clerk de desarrollo en modo restringido, email y
+contraseña habilitados, y webhook de sincronización operativo. No depende de planes Pro.
 
 ### Orden
 
 1. Loading y SignedIn/SignedOut.
-2. Login/registro/Google según configuración Clerk.
-3. Recuperación y verificación.
-4. `/me` y redirect: `internal` hacia `/app`; cliente con membership hacia `/portal`.
-5. Guard por autenticación y gates por permisos.
-6. Logout y expiración.
+2. Activar `Restricted mode` y retirar signup/OAuth público.
+3. Login por email + contraseña o código y recuperación administrada por Clerk.
+4. Aceptación exclusiva de invitación mediante `__clerk_ticket`.
+5. Sincronización webhook e identidad `/me`.
+6. Redirect: `internal` hacia `/app`; cliente con membership hacia `/portal`.
+7. Guard por autenticación, gates por permisos, logout, expiración y cambio de usuario.
 
 ### Riesgos
 
 Redirect a `/app` antes de `/me`, usuario Clerk aún no sincronizado, depender de metadata,
-confundir Clerk Organization con organización ILVOX.
+confundir Clerk Organization con organización ILVOX, aceptar un redirect externo, exponer
+signup por una subruta de Clerk o reintentar indefinidamente un perfil pendiente/inactivo.
 
 ### Criterios de aceptación
 
-- Todos los flujos Clerk aprobados tienen estado loading/error y redirect determinista.
+- No existe ruta, enlace ni proveedor de registro público.
+- Una invitación oficial válida puede configurar credenciales sin elegir role,
+  organización, status, permisos ni metadata.
+- Login, recuperación y verificación quedan dentro de los métodos Clerk aprobados.
 - Usuario no sincronizado o no activo no entra a portales.
 - Roles/permisos se muestran desde PostgreSQL; metadata Clerk no autoriza.
 - Un deep link protegido se reanuda después del login si el scope lo permite.
+- Logout y cambio de usuario limpian la cache.
+- El webhook verifica firma, es idempotente, serializa eventos concurrentes y rechaza
+  eventos fuera de orden.
 
 ### Pruebas
 
-E2E por flujo Clerk, token expirado, usuario bloqueado, usuario sin membership, interno,
-cliente multi-organización, logout y deep links.
+Contrato estático de auth cerrada, tickets ausentes/inválidos/expirados/usados, redirects
+externos, retry exclusivo del perfil no sincronizado, estados pending/inactive, token
+expirado, logout, cambio de usuario, firma/idempotencia/orden de webhook y un smoke real
+con un correo invitado antes de producción.
 
 ## 6. Fase 7.4 — Portal cliente
 
@@ -391,10 +407,10 @@ entre sesiones, claims comerciales confundidos con datos operativos.
 
 ## 10. Decisión de preparación
 
-IlvoxF e IlvoxB están **listos con condiciones** para iniciar 7.1. No están listos para
-conectar pantallas directamente sin las fundaciones: hoy faltan cliente HTTP/cache, token
-Bearer, `/me`, errores remotos y guards reales; además CORS/origen deben unificarse y el
-typecheck frontend debe corregirse.
+Esta decisión corresponde a la auditoría inicial: IlvoxF e IlvoxB estaban
+**listos con condiciones** para iniciar 7.1, sujetos a cliente HTTP/cache, token
+Bearer, `/me`, errores remotos, guards, CORS/origen y typecheck. Los registros de
+ejecución siguientes documentan el cierre posterior de esas condiciones.
 
 ## 11. Registro de ejecución de Fase 7.1
 
@@ -407,7 +423,66 @@ La arquitectura final y los límites están en
 `phase-7-foundations-implementation.md`; los comandos y resultados reproducibles
 están en `phase-7-foundations-test-results.md`.
 
-El gate 7.1 → 7.2 queda **técnicamente listo con una condición operativa**:
-ejecutar un smoke autenticado con session token Clerk real y perfil local
-activo. Ninguna credencial de ese tipo estaba disponible y no se simuló un 200
-de `/me`.
+El gate 7.1 → 7.2 fue cerrado posteriormente mediante el smoke autenticado real
+documentado en `phase-7-authenticated-smoke.md`.
+
+## 12. Registro de ejecución de Fase 7.2
+
+Fase 7.2 conectó exclusivamente el módulo público:
+
+- `GET /api/v1/services` y detalle público;
+- `POST /api/v1/leads` para contacto, diagnóstico y cotización;
+- tipos/adaptadores, source map, UUID opcional y TanStack Query;
+- loading, vacío, error, retry, validación, 201, 400, 404, 413, 429, 500, red y
+  timeout;
+- bloqueo de doble submit, POST sin retry y accesibilidad;
+- corrección contractual de rate limit `500` → `429` y exposición CORS de
+  `Retry-After`.
+
+No se conectaron módulos internos o portal. No se modificaron OpenAPI,
+migraciones, tablas ni RBAC. La evidencia está en
+`phase-7-public-module-implementation.md` y
+`phase-7-public-module-test-results.md`. Fase 7.3 no fue iniciada.
+
+## 13. Registro de ejecución de Fase 7.3
+
+Fase 7.3 implementó exclusivamente autenticación privada por invitación:
+
+- instancia Clerk de desarrollo Hobby con `Restricted mode` habilitado;
+- login por email con contraseña o código, sin conexiones sociales/SSO;
+- cero ruta o enlace de signup público;
+- aceptación mediante ticket oficial Clerk en `/invitacion/aceptar`;
+- estados distintos para perfil no sincronizado, pendiente e inactivo;
+- retry acotado solo para consistencia eventual;
+- redirects locales, deep links autorizados y limpieza de cache;
+- códigos backend explícitos y validación del webhook existente.
+
+No se habilitó allowlist, producción, enterprise SSO ni ninguna función Pro.
+No se modificaron migraciones, tablas, OpenAPI, RBAC ni módulos de Fase 7.4.
+La implementación y sus resultados están en
+`phase-7-invitation-auth-implementation.md` y
+`phase-7-invitation-auth-test-results.md`.
+
+## 14. Registro de ejecución de Fase 7.4
+
+Fase 7.4 conectó exclusivamente el portal del cliente:
+
+- contexto 0/1/múltiples organizaciones derivado de `/me`;
+- cancelación y eliminación de cache al cambiar contexto o identidad;
+- proyectos, hitos y entregables reales, sin campo `avance`;
+- tickets standalone, organizacionales y de proyecto;
+- comentarios cliente, confirmación, rechazo y reapertura;
+- `expectedUpdatedAt`, 409 preservando texto y mutaciones sin retry;
+- 404 neutral, errores parciales, retry manual y paginación del servidor;
+- retiro de los seis componentes mock reemplazados.
+
+El smoke PostgreSQL `PHASE74_SMOKE_` corrigió y cubrió dos brechas reales:
+`projects.read` elegía un scope incompatible para `client_contact`, y un cliente
+con rol de proyecto podía activar lectura interna de comentarios. La política
+de scopes fue especializada y `includeInternal` exige ahora actor interno.
+
+El área interna, `AppStore` y `seed.ts` permanecen sin migrar. Archivos, tareas,
+notificaciones, auditoría, RBAC, SLA, facturación, chat y métricas definitivas
+siguen ocultos. No se modificaron OpenAPI, tablas o migraciones y Fase 7.5 no
+fue iniciada. Véanse `phase-7-client-portal-implementation.md` y
+`phase-7-client-portal-test-results.md`.

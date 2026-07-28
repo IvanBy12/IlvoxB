@@ -20,6 +20,7 @@
     "smoke:phase45:public": "node scripts/smoke-phase45-public.mjs",
     "smoke:phase5:operational": "tsx scripts/smoke-phase5-operational.ts",
     "smoke:phase6:operational": "tsx scripts/smoke-phase6-operational.ts",
+    "smoke:phase74:portal": "tsx scripts/smoke-phase74-client-portal.ts",
     "check": "npm run typecheck && npm run lint && npm run test && npm run test:constraint-audit && npm run build",
     "db:generate": "drizzle-kit generate",
     "db:export": "drizzle-kit export",

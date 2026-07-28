@@ -39,16 +39,36 @@ describe("authentication context and GET /me", () => {
 
   it("rejects a Clerk user without a local profile", async () => {
     app = await buildTestApp({}, { authenticationProvider: authenticated, identityRepository: repository(null) });
-    expect((await app.inject({ method: "GET", url: "/me" })).statusCode).toBe(403);
+    const response = await app.inject({ method: "GET", url: "/me" });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: { code: "PROFILE_NOT_SYNCHRONIZED" },
+    });
   });
 
-  for (const status of ["pending", "blocked", "deleted"] as const) {
-    it(`rejects a ${status} local user`, async () => {
+  it("rejects a pending local user without activating it", async () => {
+    app = await buildTestApp({}, {
+      authenticationProvider: authenticated,
+      identityRepository: repository(localProfile({ status: "pending" })),
+    });
+    const response = await app.inject({ method: "GET", url: "/me" });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: { code: "PROFILE_PENDING" },
+    });
+  });
+
+  for (const status of ["blocked", "deleted"] as const) {
+    it(`rejects a ${status} local user as inactive`, async () => {
       app = await buildTestApp({}, {
         authenticationProvider: authenticated,
         identityRepository: repository(localProfile({ status })),
       });
-      expect((await app.inject({ method: "GET", url: "/me" })).statusCode).toBe(403);
+      const response = await app.inject({ method: "GET", url: "/me" });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: { code: "PROFILE_INACTIVE" },
+      });
     });
   }
 
@@ -59,7 +79,11 @@ describe("authentication context and GET /me", () => {
       authenticationProvider: authenticated,
       identityRepository: repository(inactive),
     });
-    expect((await app.inject({ method: "GET", url: "/me" })).statusCode).toBe(403);
+    const response = await app.inject({ method: "GET", url: "/me" });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: { code: "PROFILE_INACTIVE" },
+    });
   });
 
   it("returns an active internal actor without secrets", async () => {

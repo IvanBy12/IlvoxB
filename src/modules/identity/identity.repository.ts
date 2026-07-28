@@ -25,7 +25,9 @@ interface EffectiveRoleRow {
   readonly permission_code: string;
 }
 
-function scopesFor(row: EffectiveRoleRow): readonly AccessScope[] {
+export function scopesForIdentityRole(
+  row: Pick<EffectiveRoleRow, "permission_code" | "role_scope" | "role_code">,
+): readonly AccessScope[] {
   if (row.permission_code === "services.read") return row.role_scope === "global" ? ["global", "public"] : ["public"];
   if (row.role_scope === "global") {
     if (!row.permission_code.startsWith("tickets.") &&
@@ -35,7 +37,13 @@ function scopesFor(row: EffectiveRoleRow): readonly AccessScope[] {
     return ["own"];
   }
   if (row.role_scope === "organization") {
-    return row.role_code === "client_contact" ? ["own", "assigned"] : ["organization"];
+    if (row.role_code !== "client_contact") return ["organization"];
+    if (row.permission_code === "projects.read") return ["assigned"];
+    if (row.permission_code.startsWith("tickets.") ||
+        row.permission_code.startsWith("ticket_comments.")) {
+      return ["own", "assigned"];
+    }
+    return ["organization"];
   }
   return ["assigned"];
 }
@@ -97,7 +105,7 @@ export class PostgresIdentityRepository implements IdentityRepository {
       const grant = permissionMap.get(row.permission_code) ?? {
         scopes: new Set<AccessScope>(), scopeOrganizations: new Map<AccessScope, Set<string>>(),
       };
-      for (const scope of scopesFor(row)) {
+      for (const scope of scopesForIdentityRole(row)) {
         grant.scopes.add(scope);
         if (row.organization_id !== null && scope !== "global" && scope !== "public") {
           const organizations = grant.scopeOrganizations.get(scope) ?? new Set<string>();

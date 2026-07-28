@@ -210,7 +210,11 @@ export class TicketService {
       action: "ticket_comments.read_internal",
       resourceType: "ticket_comment",
     });
-    const result = await this.repository.listComments(scope, ticketId, internalDecision.allowed);
+    const result = await this.repository.listComments(
+      scope,
+      ticketId,
+      actor.internal && internalDecision.allowed,
+    );
     if (result === null) throw this.notFound();
     return result;
   }

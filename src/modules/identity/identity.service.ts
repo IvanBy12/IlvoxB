@@ -8,10 +8,24 @@ export class IdentityService {
 
   async requireActiveProfile(clerkUserId: string): Promise<LocalIdentityProfile> {
     const profile = await this.repository.findByClerkUserId(clerkUserId);
-    if (profile === null || profile.actor.status !== "active") {
+    if (profile === null) {
       throw new AppError({
-        code: ErrorCode.Forbidden,
-        message: "Local access is not active",
+        code: ErrorCode.ProfileNotSynchronized,
+        message: "Local profile is not synchronized yet",
+        statusCode: 403,
+      });
+    }
+    if (profile.actor.status === "pending") {
+      throw new AppError({
+        code: ErrorCode.ProfilePending,
+        message: "Local access is pending",
+        statusCode: 403,
+      });
+    }
+    if (profile.actor.status !== "active") {
+      throw new AppError({
+        code: ErrorCode.ProfileInactive,
+        message: "Local access is not available",
         statusCode: 403,
       });
     }

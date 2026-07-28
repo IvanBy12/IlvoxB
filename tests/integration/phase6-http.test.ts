@@ -239,6 +239,33 @@ describe("Phase 6 ticket HTTP contracts", () => {
     })).statusCode).toBe(400);
   });
 
+  it("never includes internal comments for a non-internal client actor", async () => {
+    const listComments = vi.fn<TicketRepository["listComments"]>(() =>
+      Promise.resolve([comment]),
+    );
+    const tickets: TicketRepository = { ...repository(), listComments };
+    app = await buildTestApp({}, {
+      authenticationProvider: authenticated,
+      identityRepository: identity([
+        { code: "tickets.read", scopes: ["own"] },
+        { code: "ticket_comments.read_internal", scopes: ["assigned"] },
+      ]),
+      ticketRepository: tickets,
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/v1/tickets/${TICKET_ID}/comments`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(listComments).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "own" }),
+      TICKET_ID,
+      false,
+    );
+  });
+
   it("maps a requester reopen intent to reopened without accepting a target status", async () => {
     const closed = { ...ticket, status: "closed" as const, closedAt: now };
     const transition = vi.fn<TicketRepository["transition"]>(() => Promise.resolve({

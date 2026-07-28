@@ -24,6 +24,12 @@ describe("local CORS contract", () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBe(ALLOWED_ORIGIN);
     expect(response.headers["access-control-allow-credentials"]).toBe("true");
+    expect(response.headers["access-control-expose-headers"]?.toLowerCase()).toContain(
+      "retry-after",
+    );
+    expect(response.headers["access-control-expose-headers"]?.toLowerCase()).toContain(
+      "x-request-id",
+    );
   });
 
   it("does not grant CORS to a different local origin", async () => {
