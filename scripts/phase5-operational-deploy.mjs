@@ -50,8 +50,13 @@ if (connectionString === undefined || connectionString.trim() === "") {
   console.error("DATABASE_URL_MISSING");
   process.exit(2);
 }
-if (entries.length !== 8 || migrations.length !== 8) {
+if (entries.length !== migrations.length || entries.length < 8) {
   throw new Error(`MIGRATION_SET_MISMATCH journal=${entries.length} files=${migrations.length}`);
+}
+if (command !== "inspect" && entries.length !== 8) {
+  throw new Error(
+    "PHASE5_MUTATION_DISABLED_AFTER_NEWER_MIGRATIONS use the phase-specific workflow",
+  );
 }
 for (const entry of entries) {
   if (typeof entry.hash !== "string" || entry.hash.length !== 64) {

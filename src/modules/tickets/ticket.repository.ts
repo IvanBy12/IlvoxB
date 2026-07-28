@@ -502,10 +502,10 @@ export class PostgresTicketRepository implements TicketRepository {
       if (current.status !== currentStatus || !sameTimestamp(current.updatedAt, expectedUpdatedAt)) return "conflict";
       const result = await client.query<TicketRow>(
         `UPDATE tickets SET
-           status = $2,
-           resolution = CASE WHEN $2 = 'resolved' THEN $3 ELSE resolution END,
-           resolved_at = CASE WHEN $2 = 'resolved' THEN now() ELSE resolved_at END,
-           closed_at = CASE WHEN $2 = 'closed' THEN now() ELSE NULL END,
+           status = $2::varchar(30),
+           resolution = CASE WHEN $2::varchar(30) = 'resolved' THEN $3 ELSE resolution END,
+           resolved_at = CASE WHEN $2::varchar(30) = 'resolved' THEN now() ELSE resolved_at END,
+           closed_at = CASE WHEN $2::varchar(30) = 'closed' THEN now() ELSE NULL END,
            updated_at = now()
          WHERE id = $1 AND status = $4
          RETURNING id, organization_id, project_id, requester_user_id, assigned_to_user_id,
@@ -551,8 +551,8 @@ export class PostgresTicketRepository implements TicketRepository {
       if (current.status !== "resolved" || !sameTimestamp(current.updatedAt, expectedUpdatedAt)) return "conflict";
       const nextStatus = decision === "confirm" ? "closed" : "reopened";
       const result = await client.query<TicketRow>(
-        `UPDATE tickets SET status = $2,
-           closed_at = CASE WHEN $2 = 'closed' THEN now() ELSE NULL END,
+        `UPDATE tickets SET status = $2::varchar(30),
+           closed_at = CASE WHEN $2::varchar(30) = 'closed' THEN now() ELSE NULL END,
            updated_at = now()
          WHERE id = $1 AND status = 'resolved'
          RETURNING id, organization_id, project_id, requester_user_id, assigned_to_user_id,

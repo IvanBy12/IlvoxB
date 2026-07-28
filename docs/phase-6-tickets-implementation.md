@@ -43,3 +43,11 @@ No se habilitaron. `tasks` todavía exige un rediseño conjunto de su check de
 contexto y la FK compuesta nullable a tickets para soportar con seguridad un
 ticket standalone. Forzar la API habría dejado una vía `MATCH SIMPLE`
 insuficiente. Esta brecha no bloquea el módulo principal de tickets.
+
+## Migración
+
+`0008_phase6-tickets` incluye preflight, postflight, breakpoints Drizzle,
+snapshot y rollback separado. Fue ensayada con el migrador oficial en un
+entorno temporal: 19/208/45/59/16/56 y RBAC 11/37/159 antes;
+19/208/47/60/16/58 y RBAC 11/39/165 después. El segundo migrate fue no-op y el
+rollback restauró los conteos previos. `GestionIlvox.public` no fue modificado.

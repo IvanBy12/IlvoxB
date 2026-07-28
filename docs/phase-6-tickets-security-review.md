@@ -20,5 +20,6 @@
 - edición/borrado de comentarios requiere historial persistente futuro;
 - tareas de ticket requieren rediseño estructural antes de habilitarse;
 - archivos standalone requieren un modelo de tenant/audiencia distinto;
-- la credencial PostgreSQL previamente expuesta debe estar rotada antes de
-  cualquier ensayo con cleanup destructivo.
+
+La credencial PostgreSQL evaluada es exclusivamente local, no desplegada ni
+reutilizada; se autorizó el ensayo temporal sin rotación como requisito.

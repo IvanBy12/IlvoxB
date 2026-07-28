@@ -5,7 +5,6 @@ Fase 7 no fue iniciada ni diseñada funcionalmente en esta tarea.
 Antes de autorizarla deben estar cerrados:
 
 - ensayo PostgreSQL temporal y regresiones completas de Fase 6;
-- rotación de la credencial local;
 - `npm audit` con egress y tratamiento de advisories;
 - decisión separada sobre tareas de ticket;
 - decisión separada sobre archivos standalone.
