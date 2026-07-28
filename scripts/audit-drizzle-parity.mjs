@@ -58,6 +58,8 @@ const comparisons = [
       "idx_files_organization_audience_active",
       "idx_project_members_active_user",
       "idx_deliverables_milestone",
+      "idx_tickets_standalone_requester_created",
+      "idx_tickets_updated_at",
     ],
   ),
   compareNames(
@@ -68,6 +70,7 @@ const comparisons = [
       "chk_files_audience",
       "chk_identity_webhook_events_payload_sha256",
       "chk_project_members_status",
+      "chk_tickets_project_requires_organization",
       "chk_project_members_revocation",
     ],
   ),
@@ -75,7 +78,11 @@ const comparisons = [
     "named foreign keys",
     matches(sourceSql, /CONSTRAINT\s+(fk_[a-z_][a-z0-9_]*)\s+FOREIGN\s+KEY/gi),
     matches(drizzleSql, /CONSTRAINT\s+"(fk_[a-z_][a-z0-9_]*)"\s+FOREIGN\s+KEY/gi),
-    ["fk_deliverables_milestone_project"],
+    [
+      "fk_deliverables_milestone_project",
+      "fk_ticket_comments_ticket_id",
+      "fk_tickets_project_id",
+    ],
   ),
   compareNames(
     "named unique constraints",
@@ -93,7 +100,7 @@ const sourceStored = matches(sourceSql, /GENERATED\s+ALWAYS\s+AS\s*\([\s\S]*?\)\
 const drizzleStored = matches(drizzleSql, /GENERATED\s+ALWAYS\s+AS\s*\([\s\S]*?\)\s+STORED/gi, 0).length;
 
 for (const [label, source, mapped, allowedDifference = 0] of [
-  ["foreign-key references", sourceForeignKeys, drizzleForeignKeys, 2],
+  ["foreign-key references", sourceForeignKeys, drizzleForeignKeys, 4],
   ["identity columns", sourceIdentity, drizzleIdentity],
   ["stored generated columns", sourceStored, drizzleStored],
 ]) {

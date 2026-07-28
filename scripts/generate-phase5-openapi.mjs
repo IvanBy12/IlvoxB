@@ -3,6 +3,9 @@ import { resolve } from "node:path";
 
 const target = resolve("docs", "openapi.json");
 const document = JSON.parse(await readFile(target, "utf8"));
+for (const path of Object.keys(document.paths)) {
+  if (path.startsWith("/tickets")) delete document.paths[path];
+}
 document.info.version = "0.5.1";
 document.info.description =
   "Cierre de Fase 5: proyectos ligados a organizaciones, revocación histórica de miembros, hitos, entregables opcionalmente ligados a hitos y tareas internas o de proyecto. No incluye tickets, comentarios ni archivos.";
@@ -492,7 +495,6 @@ Object.assign(document.components.schemas, {
     properties: {
       name: { type: "string", minLength: 1, maxLength: 200 },
       description: { type: "string", maxLength: 10000 },
-      milestoneId: { type: "string", format: "uuid" },
       dueDate: { type: "string", format: "date" },
     },
   },
@@ -503,7 +505,6 @@ Object.assign(document.components.schemas, {
     properties: {
       name: { type: "string", minLength: 1, maxLength: 200 },
       description: { type: ["string", "null"], maxLength: 10000 },
-      milestoneId: { type: ["string", "null"], format: "uuid" },
       status: { type: "string", enum: ["pending", "in_progress", "completed"] },
       dueDate: { type: "string", format: "date" },
       expectedUpdatedAt: optionalTimestamp,
@@ -516,6 +517,7 @@ Object.assign(document.components.schemas, {
     properties: {
       name: { type: "string", minLength: 1, maxLength: 200 },
       description: { type: "string", maxLength: 10000 },
+      milestoneId: { type: "string", format: "uuid" },
     },
   },
   DeliverablePatch: {
@@ -525,6 +527,7 @@ Object.assign(document.components.schemas, {
     properties: {
       name: { type: "string", minLength: 1, maxLength: 200 },
       description: { type: ["string", "null"], maxLength: 10000 },
+      milestoneId: { type: ["string", "null"], format: "uuid" },
       status: {
         type: "string",
         enum: ["pending", "in_review", "delivered", "approved", "rejected"],

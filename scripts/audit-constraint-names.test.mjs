@@ -116,7 +116,7 @@ test("accepts only the complete pending Phase 5 closure constraint set", () => {
     phase5ClosureArtifacts: { columns: 0, indexes: 0 },
   });
   assert.equal(pending.ok, true);
-  assert.equal(pending.pendingMode, "phase5_closure_pending");
+  assert.equal(pending.pendingMode, "migration_pending");
 
   const partial = buildConstraintAudit({
     exportedSql: closureExportedSql,
@@ -150,6 +150,6 @@ test("rejects Phase 5 columns or indexes applied without the complete constraint
     phase5ClosureArtifacts: { columns: 4, indexes: 2 },
   });
   assert.equal(result.ok, false);
-  assert.equal(result.pendingMode, "phase5_closure_pending");
+  assert.equal(result.pendingMode, "migration_pending");
   assert.equal(result.phase5ClosureArtifacts.mode, "applied");
 });

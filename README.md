@@ -2,9 +2,10 @@
 
 Backend Node.js, TypeScript, Fastify, Drizzle ORM y PostgreSQL.
 
-Fase 5 incluye proyectos ligados a organizaciones, miembros con revocacion
-historica, hitos, entregables opcionalmente ligados a hitos y tareas de proyecto
-o standalone internas.
+Fase 6 incluye tickets standalone privados, organizacionales o ligados a
+proyectos, con comentarios, scopes SQL, asignacion, prioridad, maquina de
+estados, confirmacion y auditoria transaccional. Archivos y Fase 7 no estan
+incluidos.
 
 ## Requisitos
 
@@ -32,13 +33,15 @@ npm.cmd run db:validate:runtime -- --database-url
 npm.cmd run db:validate:phase3 -- --database-url
 npm.cmd run db:validate:phase45 -- --database-url
 npm.cmd run db:validate:phase5-closure -- --database-url
+npm.cmd run db:validate:phase6 -- --database-url
 npm.cmd run test:database -- --database-url
 npm.cmd run smoke:phase5:operational
 npm.cmd run openapi:phase5
+npm.cmd run openapi:phase6
 ```
 
-La API esta en `docs/openapi.json` (0.5.1, 44 operaciones). El cierre operativo
-y sus evidencias estan en `docs/phase-5-operational-deployment.md`.
+La API esta en `docs/openapi.json` (0.6.0, 55 operaciones). La implementacion
+de tickets se documenta en `docs/phase-6-tickets-implementation.md`.
 
 La baseline exacta esta en `drizzle/baseline/`. No use `drizzle-kit push`.
 La base local `GestionIlvox.public` reconoce 0000-0007; 0000-0005 fueron
@@ -47,5 +50,5 @@ Para auditar o repetir el procedimiento en otro entorno, use
 `npm run db:operate:phase5 -- inspect` y siga
 `docs/drizzle-history-recognition.md`.
 
-Fase 5 esta cerrada con la condicion de completar `npm audit` antes de
-despliegue publico. Fase 6 no fue iniciada.
+La migracion 0008 de Fase 6 esta versionada pero no se aplica automaticamente a
+`GestionIlvox.public`. `npm audit` continua como gate de despliegue publico.

@@ -22,7 +22,7 @@ export const tickets = pgTable(
   "tickets",
   {
     id: uuid("id").default(sql`gen_random_uuid()`).primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
+    organizationId: uuid("organization_id"),
     projectId: uuid("project_id"),
     requesterUserId: uuid("requester_user_id").notNull(),
     assignedToUserId: uuid("assigned_to_user_id"),
@@ -97,6 +97,15 @@ export const tickets = pgTable(
       columns: [table.projectId, table.organizationId],
       foreignColumns: [projects.id, projects.organizationId],
     }).onDelete("restrict"),
+    foreignKey({
+      name: "fk_tickets_project_id",
+      columns: [table.projectId],
+      foreignColumns: [projects.id],
+    }).onDelete("restrict"),
+    check(
+      "chk_tickets_project_requires_organization",
+      sql`${table.projectId} IS NULL OR ${table.organizationId} IS NOT NULL`,
+    ),
     check("chk_tickets_ticket_year", sql`${table.ticketYear} BETWEEN 2000 AND 9999`),
     check(
       "chk_tickets_type",
@@ -135,6 +144,10 @@ export const tickets = pgTable(
     index("idx_tickets_requester").on(table.requesterUserId),
     index("idx_tickets_assignee_status").on(table.assignedToUserId, table.status),
     index("idx_tickets_created_at").on(table.createdAt.desc()),
+    index("idx_tickets_updated_at").on(table.updatedAt.desc()),
+    index("idx_tickets_standalone_requester_created")
+      .on(table.requesterUserId, table.createdAt.desc())
+      .where(sql`${table.organizationId} IS NULL`),
   ],
 );
 
@@ -143,7 +156,7 @@ export const ticketComments = pgTable(
   {
     id: uuid("id").default(sql`gen_random_uuid()`).primaryKey(),
     ticketId: uuid("ticket_id").notNull(),
-    organizationId: uuid("organization_id").notNull(),
+    organizationId: uuid("organization_id"),
     authorUserId: uuid("author_user_id").notNull(),
     visibility: varchar("visibility", { length: 20, enum: ["internal", "client"] }).notNull(),
     content: text("content").notNull(),
@@ -161,6 +174,11 @@ export const ticketComments = pgTable(
       name: "fk_ticket_comments_ticket",
       columns: [table.ticketId, table.organizationId],
       foreignColumns: [tickets.id, tickets.organizationId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "fk_ticket_comments_ticket_id",
+      columns: [table.ticketId],
+      foreignColumns: [tickets.id],
     }).onDelete("restrict"),
     check(
       "chk_ticket_comments_visibility",

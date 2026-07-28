@@ -39,6 +39,10 @@ import type { TaskRepository } from "./modules/tasks/task.types.js";
 import { PostgresTaskRepository } from "./modules/tasks/task.repository.js";
 import { TaskService } from "./modules/tasks/task.service.js";
 import { taskRoutes } from "./modules/tasks/task.routes.js";
+import type { TicketRepository } from "./modules/tickets/ticket.types.js";
+import { PostgresTicketRepository } from "./modules/tickets/ticket.repository.js";
+import { TicketService } from "./modules/tickets/ticket.service.js";
+import { ticketRoutes } from "./modules/tickets/ticket.routes.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -52,6 +56,7 @@ export interface BuildAppOptions {
   readonly organizationRepository?: OrganizationRepository;
   readonly projectRepository?: ProjectRepository;
   readonly taskRepository?: TaskRepository;
+  readonly ticketRepository?: TicketRepository;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -153,6 +158,16 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(taskRoutes, {
       prefix: "/api/v1",
       service: new TaskService(taskRepository, authorization),
+    });
+  }
+
+  const hasPhase6Dependencies = app.databasePool !== null || options.ticketRepository !== undefined;
+  if (hasPhase6Dependencies) {
+    const authorization = new AuthorizationService();
+    const ticketRepository = options.ticketRepository ?? new PostgresTicketRepository(app.databasePool!);
+    await app.register(ticketRoutes, {
+      prefix: "/api/v1",
+      service: new TicketService(ticketRepository, authorization),
     });
   }
 

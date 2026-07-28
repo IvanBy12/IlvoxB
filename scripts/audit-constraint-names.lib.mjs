@@ -117,7 +117,7 @@ export function buildConstraintAudit({
             ? state === "applied"
             : state === "pending",
         )
-        ? "phase5_closure_pending"
+        ? "migration_pending"
         : "drift";
   const leadConstraints = physicalConstraints.filter(
     (constraint) =>
@@ -138,7 +138,7 @@ export function buildConstraintAudit({
           : "drift";
   const phase5StateMatches =
     phase5ArtifactMode === "not_checked" ||
-    (pendingMode === "phase5_closure_pending" && phase5ArtifactMode === "pending") ||
+    (pendingMode === "migration_pending" && phase5ArtifactMode === "pending") ||
     (pendingMode === "applied" && phase5ArtifactMode === "applied");
   const comparisonsMatch = pendingMode !== "drift" && phase5StateMatches;
   const ok =

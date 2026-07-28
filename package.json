@@ -27,13 +27,15 @@
     "db:validate:phase3": "node scripts/validate-phase3-migrations.mjs",
     "db:validate:phase45": "node scripts/validate-phase45-migrations.mjs",
     "db:validate:phase5-closure": "node scripts/validate-phase5-closure-migrations.mjs",
+    "db:validate:phase6": "node scripts/validate-phase6-migrations.mjs",
     "db:operate:phase5": "node scripts/phase5-operational-deploy.mjs",
     "db:check:phase3-cleanup": "node scripts/check-phase3-cleanup.mjs",
     "audit:sql": "node scripts/audit-sql.mjs",
     "audit:rbac": "node scripts/audit-rbac.mjs",
     "audit:parity": "node scripts/audit-drizzle-parity.mjs",
     "audit:constraint-names": "node scripts/audit-constraint-names.mjs",
-    "openapi:phase5": "node scripts/generate-phase5-openapi.mjs"
+    "openapi:phase5": "node scripts/generate-phase5-openapi.mjs",
+    "openapi:phase6": "node scripts/generate-phase6-openapi.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.12.0",

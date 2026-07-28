@@ -32,23 +32,42 @@ const phase5Operations = [
   "POST /tasks/{taskId}/assign",
   "POST /tasks/{taskId}/transition",
 ] as const;
+const phase6Operations = [
+  "GET /tickets",
+  "POST /tickets",
+  "GET /tickets/{ticketId}",
+  "PATCH /tickets/{ticketId}",
+  "POST /tickets/{ticketId}/assign",
+  "POST /tickets/{ticketId}/priority",
+  "POST /tickets/{ticketId}/transition",
+  "POST /tickets/{ticketId}/confirm",
+  "POST /tickets/{ticketId}/reopen",
+  "GET /tickets/{ticketId}/comments",
+  "POST /tickets/{ticketId}/comments",
+] as const;
 
-describe("Phase 5 OpenAPI", () => {
-  it("contains exactly the implemented Phase 5 operations and 44 total operations", () => {
+describe("Phase 6 OpenAPI", () => {
+  it("retains Phase 5 and adds exactly the eleven implemented ticket operations", () => {
     const operations = Object.entries(document.paths).flatMap(([path, item]) =>
       Object.keys(item)
         .filter((method) => methods.has(method))
         .map((method) => `${method.toUpperCase()} ${path}`));
-    expect(document.info.version).toBe("0.5.1");
-    expect(operations).toHaveLength(44);
+    expect(document.info.version).toBe("0.6.0");
+    expect(operations).toHaveLength(55);
     expect(phase5Operations.every((operation) => operations.includes(operation))).toBe(true);
+    expect(phase6Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase5Operations).toHaveLength(24);
   });
 
-  it("does not add Phase 5 ticket, comment, file, or deletion routes", () => {
-    const phase5Paths = Object.keys(document.paths)
-      .filter((path) => path.startsWith("/projects") || path.startsWith("/tasks"));
-    expect(phase5Paths.some((path) => /ticket|comment|file/i.test(path))).toBe(false);
-    expect(phase5Paths.some((path) => "delete" in document.paths[path]!)).toBe(false);
+  it("does not add file or deletion routes and documents milestoneId on deliverables only", () => {
+    const schemas = (document as unknown as {
+      components: { schemas: Record<string, { properties?: Record<string, unknown> }> };
+    }).components.schemas;
+    expect(Object.keys(document.paths).some((path) => /file|upload|download/i.test(path))).toBe(false);
+    expect(Object.values(document.paths).some((path) => "delete" in path)).toBe(false);
+    expect(schemas.MilestoneCreate?.properties).not.toHaveProperty("milestoneId");
+    expect(schemas.MilestonePatch?.properties).not.toHaveProperty("milestoneId");
+    expect(schemas.DeliverableCreate?.properties).toHaveProperty("milestoneId");
+    expect(schemas.DeliverablePatch?.properties).toHaveProperty("milestoneId");
   });
 });

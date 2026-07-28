@@ -23,6 +23,25 @@ const TICKET_STATE_RULES: Readonly<Record<string, string>> = {
   "tickets.request_reopen": "closed",
 };
 
+const ACTIVE_USER_OWN_ACTIONS = new Set([
+  "tickets.read",
+  "tickets.create",
+  "tickets.update",
+  "tickets.confirm_resolution",
+  "tickets.reject_resolution",
+  "tickets.request_reopen",
+  "ticket_comments.create_client",
+]);
+
+function permissionFor(actor: ActorContext, action: string) {
+  const explicit = actor.permissions.find((item) => item.code === action);
+  if (!ACTIVE_USER_OWN_ACTIONS.has(action)) return explicit;
+  if (explicit === undefined) return { code: action, scopes: ["own" as const] };
+  return explicit.scopes.includes("own")
+    ? explicit
+    : { ...explicit, scopes: [...explicit.scopes, "own" as const] };
+}
+
 function denied(reasonCode: AuthorizationReasonCode, action: string): AuthorizationDecision {
   return { allowed: false, reasonCode, auditRequired: SENSITIVE_ACTIONS.has(action) };
 }
@@ -35,7 +54,7 @@ export class AuthorizationService {
   can(request: AuthorizationRequest): AuthorizationDecision {
     if (request.actor.status !== "active") return denied("ACTOR_INACTIVE", request.action);
 
-    const permission = request.actor.permissions.find((item) => item.code === request.action);
+    const permission = permissionFor(request.actor, request.action);
     if (permission === undefined) return denied("PERMISSION_DENIED", request.action);
 
     if (request.requestedRole?.scope === "global" && request.requestedRole.code === "super_admin") {
@@ -95,7 +114,7 @@ export class AuthorizationService {
     request: AuthorizationRequest,
     allowedScopes?: readonly AccessScope[],
   ): AuthorizedRepositoryScope | undefined {
-    const permission = request.actor.permissions.find((item) => item.code === request.action);
+    const permission = permissionFor(request.actor, request.action);
     const scopes = allowedScopes ?? permission?.scopes;
     if (scopes === undefined || scopes.length === 0) return undefined;
     const requested = request.requestedScope;

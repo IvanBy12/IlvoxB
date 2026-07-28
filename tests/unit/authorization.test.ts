@@ -7,7 +7,8 @@ describe("AuthorizationService", () => {
   const service = new AuthorizationService();
 
   it("denies by default and rejects inactive local states", () => {
-    expect(service.can({ actor: actor(), action: "tickets.read" }).reasonCode).toBe("PERMISSION_DENIED");
+    expect(service.can({ actor: actor(), action: "tickets.read" }).repositoryScope?.kind).toBe("own");
+    expect(service.can({ actor: actor(), action: "tasks.read" }).reasonCode).toBe("PERMISSION_DENIED");
     for (const status of ["pending", "blocked", "deleted"] as const) {
       expect(service.can({ actor: actor({ status }), action: "tickets.read" }).reasonCode).toBe("ACTOR_INACTIVE");
     }
@@ -53,6 +54,25 @@ describe("AuthorizationService", () => {
       actorId: USER_A,
       organizationIds: [],
     });
+  });
+
+  it("adds own self-service without removing an actor's explicit ticket scope", () => {
+    const support = actor({
+      internal: true,
+      organizations: [],
+      permissions: [{ code: "tickets.create", scopes: ["global"] }],
+    });
+    expect(service.can({
+      actor: support,
+      action: "tickets.create",
+      requestedScope: "own",
+    }).repositoryScope).toEqual({
+      kind: "own",
+      actorId: USER_A,
+      organizationIds: [],
+    });
+    expect(service.can({ actor: support, action: "tickets.create" }).repositoryScope?.kind)
+      .toBe("global");
   });
 
   it("requires access_all for a cross-organization global operation", () => {

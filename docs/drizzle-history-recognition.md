@@ -59,3 +59,11 @@ deben recalcularse los hashes de los archivos presentes, verificarse todos los
 efectos fisicos y repetirse backup, ensayo y preflight. Nunca se debe reconocer
 solo 0000, ejecutar la baseline sobre una base poblada ni usar
 `drizzle-kit push`.
+# Migración versionada de Fase 6
+
+El journal añade `0008_phase6-tickets` con `created_at=1785198997717` y hash
+SHA-256 definitivo
+`98903f835896224c59767e2723eb0cf2b13d2dd2f2c67dc4dc4cc1aef1945cd6`.
+La migración no ha sido aplicada ni reconocida en `GestionIlvox.public`; el
+historial persistente autorizado continúa exactamente en 0000-0007 hasta una
+operación posterior separada.

@@ -58,3 +58,12 @@ La captación no deduplica por correo: dos solicitudes legítimas pueden compart
 La conversión es idempotente por el estado y vínculo persistidos del lead bajo lock. Una
 repetición con una organización o identidad empresarial incompatible devuelve conflicto.
 No se afirma idempotencia general por header porque el esquema no almacena una clave.
+# Convenciones añadidas en Fase 6
+
+- Los tickets fuera de scope y los inexistentes responden 404.
+- `expectedUpdatedAt` protege PATCH, asignación, prioridad, transición y
+  confirmación cuando se envía.
+- Estado, asignación, prioridad operativa y confirmación usan rutas explícitas.
+- Solicitante, autor, tenant derivado y campos generados son server-owned.
+- Los comentarios son texto plano, acotados e inmutables.
+- `organization_id = NULL` es un ticket standalone privado, no público.

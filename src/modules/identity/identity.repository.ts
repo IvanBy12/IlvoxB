@@ -27,7 +27,13 @@ interface EffectiveRoleRow {
 
 function scopesFor(row: EffectiveRoleRow): readonly AccessScope[] {
   if (row.permission_code === "services.read") return row.role_scope === "global" ? ["global", "public"] : ["public"];
-  if (row.role_scope === "global") return ["global"];
+  if (row.role_scope === "global") {
+    if (!row.permission_code.startsWith("tickets.") &&
+        !row.permission_code.startsWith("ticket_comments.")) return ["global"];
+    if (["super_admin", "admin", "support_agent"].includes(row.role_code)) return ["global"];
+    if (["project_lead", "contributor"].includes(row.role_code)) return ["assigned"];
+    return ["own"];
+  }
   if (row.role_scope === "organization") {
     return row.role_code === "client_contact" ? ["own", "assigned"] : ["organization"];
   }

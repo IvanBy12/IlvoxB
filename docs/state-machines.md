@@ -117,3 +117,11 @@ Las tres máquinas pueden imponerse en servicios sin cambiar sus estados SQL. Pa
 - opcionalmente historial específico de tareas si los eventos de auditoría no bastan para reportes.
 
 No se ejecutó ninguna de estas migraciones.
+# Implementación de Fase 6
+
+La máquina de Ticket descrita abajo quedó implementada en
+`src/common/state-machines/ticket-transitions.ts` sin añadir estados. Las
+transiciones genéricas de cliente siguen prohibidas. Confirmar produce
+`closed`; rechazar produce `reopened` y exige motivo. Cerrar/reabrir mantienen
+`closed_at`, resolver mantiene `resolution/resolved_at`, y toda mutación usa
+lock y conflicto seguro.

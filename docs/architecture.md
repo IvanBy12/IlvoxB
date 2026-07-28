@@ -69,3 +69,16 @@ del recurso padre. No se emiten URLs públicas permanentes. Fase 4 no devuelve a
 
 PostgreSQL 18.x es la versión oficial; PostgreSQL 18.4 es la validada. Staging y producción
 deben permanecer en 18.x salvo nueva decisión arquitectónica.
+# Actualización de Fase 6
+
+El módulo `src/modules/tickets` sigue la separación rutas → servicio →
+repositorio PostgreSQL. El servicio compone permisos y máquina de estados; el
+repositorio aplica scope dentro de SQL, bloquea mutaciones y registra auditoría
+en la misma transacción.
+
+Los tickets aceptan organización nullable únicamente para standalone privado.
+La existencia de proyecto/comentario usa FK simple; las relaciones de tenant
+conservan FK compuesta y checks/derivación. `organization_id IS NULL` nunca
+representa acceso público.
+
+Las tareas de ticket y archivos permanecen fuera del runtime de Fase 6.

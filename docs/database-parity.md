@@ -236,3 +236,13 @@ Los hashes y timestamps definitivos, junto con la estructura real de
 `docs/drizzle-history-recognition.md`. La evidencia de backup, ensayo,
 postflight, smokes y limpieza esta en
 `docs/phase-5-operational-deployment.md`.
+# Modelo esperado de Fase 6
+
+La migración 0008 añade, sin aplicarse todavía a `GestionIlvox.public`, dos FKs
+simples (`fk_tickets_project_id`, `fk_ticket_comments_ticket_id`), un check,
+dos índices y un trigger de derivación de organización de comentarios. El
+snapshot esperado conserva 19 tablas/208 columnas y pasa a 47 FK, 60 CHECK, 16
+UNIQUE y 58 índices explícitos. RBAC esperado: 11 roles, 39 permisos y 165
+asociaciones.
+
+La paridad estática distingue esos artefactos versionados pendientes del drift.

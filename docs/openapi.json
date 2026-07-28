@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ILVOX Backend API",
-    "version": "0.5.1",
-    "description": "Cierre de Fase 5: proyectos ligados a organizaciones, revocación histórica de miembros, hitos, entregables opcionalmente ligados a hitos y tareas internas o de proyecto. No incluye tickets, comentarios ni archivos."
+    "version": "0.6.0",
+    "description": "Fase 6: tickets standalone, organizacionales y de proyecto; asignación, prioridad, transiciones, confirmación y comentarios con scopes SQL. No incluye archivos, almacenamiento, notificaciones, SLA ni frontend."
   },
   "servers": [
     {
@@ -37,6 +37,12 @@
     },
     {
       "name": "Tasks"
+    },
+    {
+      "name": "Tickets"
+    },
+    {
+      "name": "Ticket Comments"
     }
   ],
   "paths": {
@@ -2199,6 +2205,638 @@
           }
         }
       }
+    },
+    "/tickets": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "List authorized tickets",
+        "description": "The identical scope predicate applies to filters, search, count, ordering and pagination. No files or download URLs are returned.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.read (active local users also have own scope)",
+        "x-scope": "SQL before count/data: explicit global grant OR active organization membership OR active project membership OR current assignee OR requester; organization_id NULL only matches its requester",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TicketStatus"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Priority"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "requesterUserId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "assignedToUserId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "createdTo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "updatedFrom",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "updatedTo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "updatedAt",
+                "code",
+                "priority",
+                "status"
+              ],
+              "default": "createdAt"
+            },
+            "description": "Whitelist only."
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Create a ticket",
+        "description": "Omit organizationId/projectId for a private standalone ticket. A project derives organizationId. The server owns requester, code, number, year, initial status, assignment, confirmations and timestamps.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.create (active local users also have standalone own scope)",
+        "x-scope": "Standalone own, active organization membership, active project membership, or explicit global grant",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tickets/{ticketId}": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Get an authorized ticket",
+        "description": "Returns 404 for missing or out-of-scope tickets. Does not include files or comments.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.read",
+        "x-scope": "SQL before count/data: explicit global grant OR active organization membership OR active project membership OR current assignee OR requester; organization_id NULL only matches its requester",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Update general ticket fields",
+        "description": "Only subject, description and requestedPriority are accepted. Context, requester, assignment, priority, status, resolution, confirmation and system fields are protected. expectedUpdatedAt is optimistic concurrency.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.update",
+        "x-scope": "SQL-scoped ticket plus operation permission; missing and out-of-scope resources both return 404",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tickets/{ticketId}/assign": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Assign or unassign a ticket",
+        "description": "The target UUID must identify an active internal local user. The row is locked and audited.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.assign",
+        "x-scope": "SQL-scoped ticket plus operation permission; missing and out-of-scope resources both return 404",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketAssign"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tickets/{ticketId}/priority": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Change operational priority",
+        "description": "Requested priority remains separate. The row is locked and the mutation is audited.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.change_priority",
+        "x-scope": "SQL-scoped ticket plus operation permission; missing and out-of-scope resources both return 404",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketPriorityChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tickets/{ticketId}/transition": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Transition ticket state",
+        "description": "Uses the exact nine-state PostgreSQL machine. Resolution requires resolution text; cancellation and reopening require reason. Clients cannot choose arbitrary states.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.change_status, tickets.resolve, or tickets.close according to target",
+        "x-scope": "SQL-scoped ticket plus operation permission; missing and out-of-scope resources both return 404",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketTransition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tickets/{ticketId}/confirm": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Confirm or reject a resolution",
+        "description": "Only resolved tickets are accepted. confirm closes; reject requires a reason and reopens. The requester is derived from the ticket and never from the body.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.confirm_resolution or tickets.reject_resolution",
+        "x-scope": "Own requester, active organization scope, or explicit global grant; SQL-scoped",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketConfirm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tickets/{ticketId}/reopen": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Request a controlled ticket reopen",
+        "description": "Only a closed authorized ticket is accepted. The server selects reopened; a non-empty reason is mandatory.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.request_reopen",
+        "x-scope": "Own requester, active organization scope, or explicit global grant; SQL-scoped",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketReopen"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/tickets/{ticketId}/comments": {
+      "get": {
+        "tags": [
+          "Ticket Comments"
+        ],
+        "summary": "List authorized ticket comments",
+        "description": "The parent ticket must pass SQL scope. Actors without ticket_comments.read_internal receive only client-visible comments.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "tickets.read; internal visibility additionally requires ticket_comments.read_internal",
+        "x-scope": "SQL before count/data: explicit global grant OR active organization membership OR active project membership OR current assignee OR requester; organization_id NULL only matches its requester",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ticket Comments"
+        ],
+        "summary": "Create an immutable ticket comment",
+        "description": "Author, ticket and organization are server-owned. Clients are forced to client visibility. Content is plain text, limited to 10000 characters, and omitted from audit payloads.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "ticket_comments.create_client or ticket_comments.create_internal",
+        "x-scope": "Inherited from the authorized parent ticket",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TicketId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketCommentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2303,6 +2941,15 @@
       },
       "TaskId": {
         "name": "taskId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "TicketId": {
+        "name": "ticketId",
         "in": "path",
         "required": true,
         "schema": {
@@ -3004,10 +3651,6 @@
             "type": "string",
             "maxLength": 10000
           },
-          "milestoneId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "dueDate": {
             "type": "string",
             "format": "date"
@@ -3030,13 +3673,6 @@
               "null"
             ],
             "maxLength": 10000
-          },
-          "milestoneId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
           },
           "status": {
             "type": "string",
@@ -3071,6 +3707,10 @@
           "description": {
             "type": "string",
             "maxLength": 10000
+          },
+          "milestoneId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -3090,6 +3730,13 @@
               "null"
             ],
             "maxLength": 10000
+          },
+          "milestoneId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "status": {
             "type": "string",
@@ -3221,6 +3868,216 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketStatus": {
+        "type": "string",
+        "enum": [
+          "new",
+          "classifying",
+          "assigned",
+          "in_progress",
+          "pending_client",
+          "resolved",
+          "closed",
+          "reopened",
+          "cancelled"
+        ]
+      },
+      "TicketType": {
+        "type": "string",
+        "enum": [
+          "incident",
+          "bug",
+          "service_request",
+          "improvement_request",
+          "question",
+          "change"
+        ]
+      },
+      "TicketCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "subject",
+          "description"
+        ],
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TicketType"
+          },
+          "requestedPriority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          }
+        }
+      },
+      "TicketPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "requestedPriority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketAssign": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assignedToUserId"
+        ],
+        "properties": {
+          "assignedToUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketPriorityChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "priority"
+        ],
+        "properties": {
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketTransition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "resolution": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketConfirm": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "confirm",
+              "reject"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketCommentCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client"
+            ]
+          }
+        }
+      },
+      "TicketReopen": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
           "expectedUpdatedAt": {
             "type": "string",
             "format": "date-time"

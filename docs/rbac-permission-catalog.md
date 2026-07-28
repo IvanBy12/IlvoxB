@@ -61,3 +61,17 @@ No se añadieron permisos ni asociaciones RBAC: el catálogo físico permanece e
 Los grants de rol de proyecto se materializan como scope `assigned` y se vuelven a comprobar
 con `EXISTS project_members` dentro de SQL. Los roles cliente no tienen permisos de tareas.
 Fase 5 no crea permisos más granulares sin una migración RBAC aprobada.
+# Adición versionada de Fase 6
+
+La migración 0008 añade:
+
+| Permiso | Grants |
+| --- | --- |
+| `tickets.update` | `global:super_admin`, `global:admin`, `global:support_agent` |
+| `tickets.change_priority` | `global:super_admin`, `global:admin`, `global:support_agent` |
+
+El catálogo esperado pasa a 39 permisos y 165 asociaciones. Usuarios locales
+activos sin rol no reciben grants globales: AuthorizationService limita sus
+capacidades de autoservicio a scope `own`. Roles globales de ventas,
+contribución y proyecto no se materializan automáticamente como lectura global
+de tickets.
