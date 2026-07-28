@@ -8,7 +8,7 @@
 - Vitest local: 99 aprobadas, 47 PostgreSQL omitidas sin URL de test.
 - Auditor de constraints: 6 aprobadas.
 - `drizzle-kit check`: aprobado.
-- Paridad estática: aprobada con artefactos 0008 pendientes en `public`.
+- Paridad estática: aprobada antes y después del despliegue operativo de 0008.
 - OpenAPI: 0.6.0, 55 operaciones.
 
 ## PostgreSQL 18.4
@@ -24,9 +24,15 @@
 - Integridad de código generado, proyecto/tenant y comentario/ticket: aprobada.
 - Concurrencia, scopes, revocación y auditoría: aprobadas.
 - Validadores de runtime, Fase 3, Fase 4.5 y cierre Fase 5: aprobados.
-- `GestionIlvox.public`: sin cambios; historia exacta 0000-0007 y 0008
-  pendiente.
+- `GestionIlvox.public`: `0008` aplicada mediante el migrador oficial;
+  historia final exacta 0000-0008 y segundo migrate no-op.
+- Smokes operativos reales: standalone, aislamiento individual, organización,
+  proyecto, comentarios, revocaciones, flujo completo y concurrencia aprobados.
+- Health posterior al reinicio: live/ready 200/200.
 - Schemas y fixtures temporales: eliminados; residuales cero.
+- Fixtures operativos en `public`: eliminados; residuales cero.
+
+La evidencia completa está en `docs/phase-6-operational-deployment.md`.
 
 ## Cobertura añadida
 

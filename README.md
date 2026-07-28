@@ -34,8 +34,10 @@ npm.cmd run db:validate:phase3 -- --database-url
 npm.cmd run db:validate:phase45 -- --database-url
 npm.cmd run db:validate:phase5-closure -- --database-url
 npm.cmd run db:validate:phase6 -- --database-url
+npm.cmd run db:operate:phase6 -- inspect
 npm.cmd run test:database -- --database-url
 npm.cmd run smoke:phase5:operational
+npm.cmd run smoke:phase6:operational
 npm.cmd run openapi:phase5
 npm.cmd run openapi:phase6
 ```
@@ -44,11 +46,15 @@ La API esta en `docs/openapi.json` (0.6.0, 55 operaciones). La implementacion
 de tickets se documenta en `docs/phase-6-tickets-implementation.md`.
 
 La baseline exacta esta en `drizzle/baseline/`. No use `drizzle-kit push`.
-La base local `GestionIlvox.public` reconoce 0000-0007; 0000-0005 fueron
+La base local `GestionIlvox.public` reconoce 0000-0008; 0000-0005 fueron
 reconocidas sin reaplicar su DDL y el migrador oficial aplico solo 0006-0007.
-Para auditar o repetir el procedimiento en otro entorno, use
+El despliegue operativo de Fase 6 aplico exclusivamente 0008 y confirmo un
+segundo migrate no-op. Para auditar el estado, use
+`npm run db:operate:phase6 -- inspect`. Para repetir el procedimiento en otro
+entorno, use
 `npm run db:operate:phase5 -- inspect` y siga
 `docs/drizzle-history-recognition.md`.
 
-La migracion 0008 de Fase 6 esta versionada pero no se aplica automaticamente a
-`GestionIlvox.public`. `npm audit` continua como gate de despliegue publico.
+La evidencia de backup, hashes, migracion, health, smokes y limpieza esta en
+`docs/phase-6-operational-deployment.md`. `npm audit` continua como gate de
+despliegue publico externo.

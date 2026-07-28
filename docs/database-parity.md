@@ -238,11 +238,12 @@ postflight, smokes y limpieza esta en
 `docs/phase-5-operational-deployment.md`.
 # Modelo esperado de Fase 6
 
-La migración 0008 añade, sin aplicarse todavía a `GestionIlvox.public`, dos FKs
+La migración 0008 aplicada en `GestionIlvox.public` añade dos FKs
 simples (`fk_tickets_project_id`, `fk_ticket_comments_ticket_id`), un check,
 dos índices y un trigger de derivación de organización de comentarios. El
-snapshot esperado conserva 19 tablas/208 columnas y pasa a 47 FK, 60 CHECK, 16
-UNIQUE y 58 índices explícitos. RBAC esperado: 11 roles, 39 permisos y 165
+catálogo operativo conserva 19 tablas/208 columnas y tiene 47 FK, 60 CHECK, 16
+UNIQUE y 58 índices explícitos. RBAC operativo: 11 roles, 39 permisos y 165
 asociaciones.
 
-La paridad estática distingue esos artefactos versionados pendientes del drift.
+La historia persistente final es exactamente 0000-0008 y no quedan migraciones
+pendientes. Véase `docs/phase-6-operational-deployment.md`.

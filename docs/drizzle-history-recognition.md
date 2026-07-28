@@ -64,6 +64,8 @@ solo 0000, ejecutar la baseline sobre una base poblada ni usar
 El journal añade `0008_phase6-tickets` con `created_at=1785198997717` y hash
 SHA-256 definitivo
 `98903f835896224c59767e2723eb0cf2b13d2dd2f2c67dc4dc4cc1aef1945cd6`.
-La migración no ha sido aplicada ni reconocida en `GestionIlvox.public`; el
-historial persistente autorizado continúa exactamente en 0000-0007 hasta una
-operación posterior separada.
+La migración fue aplicada mediante el migrador oficial a
+`GestionIlvox.public` el 27 de julio de 2026. El historial persistente final
+contiene exactamente 0000-0008, el hash de la novena fila coincide con el
+anterior y un segundo migrate fue no-op. La evidencia operativa está en
+`docs/phase-6-operational-deployment.md`.

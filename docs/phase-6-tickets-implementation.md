@@ -47,7 +47,10 @@ insuficiente. Esta brecha no bloquea el módulo principal de tickets.
 ## Migración
 
 `0008_phase6-tickets` incluye preflight, postflight, breakpoints Drizzle,
-snapshot y rollback separado. Fue ensayada con el migrador oficial en un
-entorno temporal: 19/208/45/59/16/56 y RBAC 11/37/159 antes;
-19/208/47/60/16/58 y RBAC 11/39/165 después. El segundo migrate fue no-op y el
-rollback restauró los conteos previos. `GestionIlvox.public` no fue modificado.
+snapshot y rollback separado. Primero fue ensayada con el migrador oficial en
+un entorno temporal: 19/208/45/59/16/56 y RBAC 11/37/159 antes;
+19/208/47/60/16/58 y RBAC 11/39/165 después. Después fue aplicada
+exclusivamente mediante el migrador oficial a `GestionIlvox.public`; la
+historia final es 0000-0008, el segundo migrate fue no-op y no quedan
+pendientes. El rollback solo se probó en el entorno temporal y nunca se
+ejecutó sobre `public`. Véase `docs/phase-6-operational-deployment.md`.
