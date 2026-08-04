@@ -499,3 +499,34 @@ notificaciones, auditoría, RBAC, SLA, facturación, chat y métricas definitiva
 siguen ocultos. No se modificaron OpenAPI, tablas o migraciones y Fase 7.5 no
 fue iniciada. Véanse `phase-7-client-portal-implementation.md` y
 `phase-7-client-portal-test-results.md`.
+
+## 15. Registro de ejecución de Fase 7.5A
+
+Servicios administrativos, organizaciones/clientes y memberships existentes quedaron
+conectados a contratos reales. Añadir membership y cambiar account manager se difirieron
+por ausencia de catálogo seguro. El detalle se encuentra en los documentos
+`phase-7-internal-a-*`.
+
+## 16. Registro de ejecución de Fase 7.5B
+
+Fase 7.5B conectó exclusivamente proyectos, miembros existentes, hitos, entregables y
+tareas internas standalone/de proyecto:
+
+- paginación, búsqueda, filtros y orden reales;
+- CRUD y transiciones según enums/state machines backend;
+- `expectedUpdatedAt` con formularios preservados tras 409;
+- asignación de tareas solo al usuario autenticado o líder de proyecto conocido;
+- tareas reales dentro del detalle de proyecto;
+- 404 neutral, 403 de escritura, errores/retry independientes y locks de submit;
+- retiro de `AppStore`/seed únicamente de las tres pantallas 7.5B;
+- smoke multi-organización/proyecto con `residualFixtures: 0`;
+- responsive 360/768/1024/1440 y accesibilidad focalizada.
+
+Añadir miembros, selector general de líder/assignee y desasignar tareas permanecen
+diferidos por contrato. `TaskAssignBodySchema` exige un UUID y no admite `null`. No se
+inició 7.5C: Prospectos y Tickets internos continúan pendientes, y Personal continúa
+diferido. Véanse `phase-7-internal-b-implementation.md` y
+`phase-7-internal-b-test-results.md`.
+
+**Decisión:** Fase 7.5B cerrada técnicamente; el siguiente bloque sigue siendo 7.5C y no
+fue iniciado por esta ejecución.

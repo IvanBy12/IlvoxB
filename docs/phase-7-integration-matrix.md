@@ -223,3 +223,21 @@ El portal no usa `AppStore`, seeds ni filtros locales de tenant. Standalone se
 activa únicamente cuando `/me` devuelve cero organizaciones, pues el contrato
 de listado no ofrece un filtro nullable. La autorización continúa en IlvoxB y
 PostgreSQL; `PermissionGate` no se considera barrera de seguridad.
+
+## Estado aplicado en Fase 7.5B
+
+| Superficie interna | Contratos | Estado 7.5B | Evidencia |
+| --- | --- | --- | --- |
+| Proyectos | `GET/POST /projects`, `GET/PATCH /projects/:id`, `POST /transition` | `IMPLEMENTED` | búsqueda/filtros/orden/paginación, CRUD, estados adyacentes, 404 neutral y 409 preservado |
+| Miembros existentes | `GET /members`, `PATCH /members/:userId`, `POST /revoke` | `IMPLEMENTED_WITH_DEFERRED_ADD` | rol/estado real, edición y confirmación; alta diferida sin catálogo seguro |
+| Hitos | `GET/POST /milestones`, `GET/PATCH /milestones/:id` | `IMPLEMENTED` | fechas dentro del proyecto, concurrencia, error/retry independiente |
+| Entregables | `GET/POST /deliverables`, `GET/PATCH /deliverables/:id` | `IMPLEMENTED` | hito scoped opcional, estados multivalor, aprobación/rechazo real |
+| Tareas standalone | `GET/POST /tasks`, `GET/PATCH /tasks/:id`, assign/transition | `IMPLEMENTED` | sin `projectId`, usuario autenticado conocido, minutos y concurrencia |
+| Tareas de proyecto | mismos contratos de tareas con `projectId` real | `IMPLEMENTED` | lista embebida en detalle, scope cruzado neutral y fechas de proyecto |
+| Asignación general/desasignación | `POST /tasks/:id/assign` exige UUID | `DEFERRED_BY_CONTRACT` | solo usuario autenticado/líder conocido; no existe catálogo ni null |
+| Mocks | ninguno en pantallas 7.5B | `REMOVED_FROM_SCOPE` | sin `AppStore`, seed o Clerk browser users |
+
+El smoke `PHASE75B_SMOKE_` validó permisos read/manage, 403/404 cross-tenant, aislamiento
+entre proyectos, asociación hito-entregable, asignación, transiciones, 409 y
+`residualFixtures: 0`. No se modificaron tablas, migraciones, OpenAPI o RBAC. Prospectos,
+Tickets internos y Personal permanecen fuera de este cierre.

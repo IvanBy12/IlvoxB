@@ -22,6 +22,7 @@
     "smoke:phase6:operational": "tsx scripts/smoke-phase6-operational.ts",
     "smoke:phase74:portal": "tsx scripts/smoke-phase74-client-portal.ts",
     "smoke:phase75a:internal": "tsx scripts/smoke-phase75a-internal.ts",
+    "smoke:phase75b:internal": "tsx scripts/smoke-phase75b-internal.ts",
     "bootstrap:owner": "tsx scripts/bootstrap-owner.ts",
     "check": "npm run typecheck && npm run lint && npm run test && npm run test:constraint-audit && npm run build",
     "db:generate": "drizzle-kit generate",

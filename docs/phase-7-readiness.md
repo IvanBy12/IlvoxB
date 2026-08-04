@@ -12,7 +12,7 @@ Fecha de actualización: 4 de agosto de 2026.
 | Fase 7.3 — autenticación privada por invitación | Implementada; cierre condicionado a smoke con correo invitado |
 | Fase 7.4 — portal cliente | Implementada y validada |
 | Fase 7.5A — servicios y organizaciones internas | Implementada y validada |
-| Fase 7.5B — resto del área interna | No iniciada |
+| Fase 7.5B — proyectos, miembros, hitos, entregables y tareas | Cerrada técnicamente |
 
 Fase 7.1 implementó exclusivamente transporte HTTP, token Clerk, `/me`, cache,
 errores, guards/gates, logout, cambio de usuario, origen/CORS y correcciones de
@@ -149,3 +149,30 @@ escritura.
 
 **Decisión:** Fase 7.5A queda técnicamente cerrada. Fase 7.5B no fue iniciada ni queda
 autorizada implícitamente por este cierre.
+
+## Gate de Fase 7.5B
+
+Proyectos, miembros existentes, hitos, entregables y tareas standalone/de proyecto usan
+los contratos reales. Las pantallas migradas no importan `AppStore` ni seed. La creación
+de proyecto/tarea usa únicamente IDs contractuales conocidos; el selector general de
+usuarios no fue inventado.
+
+El gate frontend aprobó typecheck, 51 pruebas y build. El backend aprobó typecheck, lint,
+120 pruebas activas, 6 auditorías de constraints y build. Runtime respondió live/ready
+200, `/me` sin token 401 y catálogo público 200.
+
+El smoke `PHASE75B_SMOKE_` cubrió dos organizaciones, aislamiento entre proyectos,
+miembros, hitos, entregables, tareas standalone/proyecto, asignación, transiciones,
+403/404, 409 y limpieza. El resultado final fue `residualFixtures: 0`.
+
+La inspección visual real cubrió 360/768/1024/1440 px y corrigió fechas civiles UTC y
+wrapping de nombres largos. No hubo overflow de documento; la tabla móvil contiene su
+propio scroll. Labels, nombres accesibles, tabulabilidad DOM y foco visible quedaron
+verificados. La secuencia manual completa de teclado no se ejecutó por limitación del
+controlador y no se declara auditoría WCAG exhaustiva.
+
+No cambiaron migraciones, tablas, OpenAPI o RBAC, y no hubo operaciones Git de escritura.
+Añadir miembros, cambiar líder por selector general, catálogo general de assignees y
+desasignar tareas permanecen diferidos por contrato.
+
+**Decisión:** Fase 7.5B queda técnicamente cerrada. Fase 7.5C no fue iniciada.
