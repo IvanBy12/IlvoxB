@@ -1,6 +1,6 @@
 # Fase 7.0 — Matriz de integración IlvoxF ↔ IlvoxB
 
-Fecha de corte: 27 de julio de 2026. Todos los endpoints de negocio se muestran con su
+Fecha de corte: 4 de agosto de 2026. Todos los endpoints de negocio se muestran con su
 prefijo real `/api/v1`. `/me` es una excepción histórica sin prefijo.
 
 ## Criterios
@@ -38,10 +38,10 @@ por PostgreSQL; no debe traducirse a un guard hardcoded.
 
 | Ruta o pantalla | Acción UI | Datos actuales | Endpoint real | Método | Autenticación | Permiso | Scope | Estado | Adaptación necesaria |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/app/administracion` | Listar servicios | Seed | `/api/v1/admin/services` | GET | Bearer | `services.read` | global | `READY_WITH_ADAPTATION` | Tabla paginada; separar de RBAC |
-| Sin pantalla | Ver servicio admin | Seed embebido | `/api/v1/admin/services/:serviceId` | GET | Bearer | `services.read` | global | `FRONTEND_MISSING` | Drawer/detalle |
-| Sin pantalla | Crear servicio | Sin acción | `/api/v1/admin/services` | POST | Bearer | `services.manage` | global, actor interno | `FRONTEND_MISSING` | Formulario y 409 duplicado |
-| Sin pantalla | Editar/publicar/ocultar | Sin acción | `/api/v1/admin/services/:serviceId` | PATCH | Bearer | `services.manage` | global, actor interno | `FRONTEND_MISSING` | Formulario, toggles y refetch |
+| `/app/administracion` | Listar/buscar/filtrar/paginar servicios | API real | `/api/v1/admin/services` | GET | Bearer | `services.read` | global | `IMPLEMENTED_7_5A` | TanStack Query y paginación remota |
+| `/app/administracion` | Ver servicio admin | API real | `/api/v1/admin/services/:serviceId` | GET | Bearer | `services.read` | global | `IMPLEMENTED_7_5A` | Detalle previo a edición |
+| `/app/administracion` | Crear servicio | API real | `/api/v1/admin/services` | POST | Bearer | `services.manage` | global, actor interno | `IMPLEMENTED_7_5A` | Formulario, doble submit y 409 |
+| `/app/administracion` | Editar/publicar/ocultar/activar | API real | `/api/v1/admin/services/:serviceId` | PATCH | Bearer | `services.manage` | global, actor interno | `IMPLEMENTED_7_5A` | Invalidación de cache interna/pública |
 | `/app/prospectos` | Listar/buscar/filtrar | Seed completo | `/api/v1/leads` | GET | Bearer | `leads.read` | global autorizado | `READY_WITH_ADAPTATION` | Server pagination/search/sort |
 | Sin detalle dedicado | Ver lead e historial | Tarjeta/fila | `/api/v1/leads/:leadId` | GET | Bearer | `leads.read` | global autorizado | `FRONTEND_MISSING` | Drawer o ruta de detalle |
 | Sin pantalla | Editar datos comerciales | No existe | `/api/v1/leads/:leadId` | PATCH | Bearer | `leads.manage` | global, actor interno | `FRONTEND_MISSING` | No enviar estado/asignación |
@@ -53,13 +53,13 @@ por PostgreSQL; no debe traducirse a un guard hardcoded.
 
 | Ruta o pantalla | Acción UI | Datos actuales | Endpoint real | Método | Autenticación | Permiso | Scope | Estado | Adaptación necesaria |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/app/clientes`, portal | Listar organizaciones | `clientes` seed | `/api/v1/organizations` | GET | Bearer | `organizations.read` | global u organization | `READY_WITH_ADAPTATION` | Cliente → organización, paginación y SQL scope |
-| Sin pantalla | Crear organización | Solo conversión mock | `/api/v1/organizations` | POST | Bearer | `organizations.manage` | global, actor interno | `FRONTEND_MISSING` | Formulario tax pair y manager |
-| `/app/clientes/:id`, portal header | Ver organización | Seed | `/api/v1/organizations/:organizationId` | GET | Bearer | `organizations.read` | global/organization | `READY_WITH_ADAPTATION` | Nullables y 404 fuera de scope |
-| Sin edición | Editar organización | No existe | `/api/v1/organizations/:organizationId` | PATCH | Bearer | `organizations.manage` | global/organization | `FRONTEND_MISSING` | Campos cliente restringidos |
-| `/app/clientes/:id` | Listar contactos | Usuarios con `clienteId` | `/api/v1/organizations/:organizationId/members` | GET | Bearer | `organizations.read` | global/organization | `READY_WITH_ADAPTATION` | Contacto → membership local |
-| Sin pantalla | Añadir membership | No existe | `/api/v1/organizations/:organizationId/members` | POST | Bearer | `organization_members.manage` | organization | `FRONTEND_MISSING` | Solo usuario local existente; no invitación externa |
-| Sin pantalla | Cambiar/revocar membership | No existe | `/api/v1/organizations/:organizationId/members/:memberId` | PATCH | Bearer | `organization_members.manage` | organization | `FRONTEND_MISSING` | Roles permitidos y estado revoked |
+| `/app/clientes` | Listar/buscar/filtrar/paginar organizaciones | API real | `/api/v1/organizations` | GET | Bearer | `organizations.read` | global u organization | `IMPLEMENTED_7_5A` | Cliente → organization; scope SQL |
+| `/app/clientes` | Crear organización | API real | `/api/v1/organizations` | POST | Bearer | `organizations.manage` | global, actor interno | `IMPLEMENTED_7_5A` | Tax pair; manager diferido |
+| `/app/clientes/:id` | Ver organización | API real | `/api/v1/organizations/:organizationId` | GET | Bearer | `organizations.read` | global/organization | `IMPLEMENTED_7_5A` | Nullables y 403/404 neutral |
+| `/app/clientes/:id` | Editar organización | API real | `/api/v1/organizations/:organizationId` | PATCH | Bearer | `organizations.manage` | global/organization | `IMPLEMENTED_7_5A` | Campos reales; manager diferido |
+| `/app/clientes/:id` | Listar contactos | API real | `/api/v1/organizations/:organizationId/members` | GET | Bearer | `organizations.read` | global/organization | `IMPLEMENTED_7_5A` | Contacto = membership local |
+| Acción deshabilitada | Añadir membership | Sin catálogo seguro de candidatos | `/api/v1/organizations/:organizationId/members` | POST | Bearer | `organization_members.manage` | organization | `DEFERRED_USER_CATALOG` | No Clerk, seed ni IDs inventados |
+| `/app/clientes/:id` | Cambiar/activar/revocar membership | API real | `/api/v1/organizations/:organizationId/members/:memberId` | PATCH | Bearer | `organization_members.manage` | organization | `IMPLEMENTED_7_5A` | Confirmación de revocación |
 
 ## Proyectos, miembros, hitos y entregables
 

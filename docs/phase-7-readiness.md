@@ -1,6 +1,6 @@
 # Readiness para Fase 7 — Integración IlvoxF ↔ IlvoxB
 
-Fecha de actualización: 28 de julio de 2026.
+Fecha de actualización: 4 de agosto de 2026.
 
 ## Estado por bloque
 
@@ -10,7 +10,9 @@ Fecha de actualización: 28 de julio de 2026.
 | Fase 7.1 — fundaciones | Implementada y validada localmente |
 | Fase 7.2 — módulo público | Implementada y validada localmente |
 | Fase 7.3 — autenticación privada por invitación | Implementada; cierre condicionado a smoke con correo invitado |
-| Fase 7.4+ — módulos posteriores | No iniciada |
+| Fase 7.4 — portal cliente | Implementada y validada |
+| Fase 7.5A — servicios y organizaciones internas | Implementada y validada |
+| Fase 7.5B — resto del área interna | No iniciada |
 
 Fase 7.1 implementó exclusivamente transporte HTTP, token Clerk, `/me`, cache,
 errores, guards/gates, logout, cambio de usuario, origen/CORS y correcciones de
@@ -123,3 +125,27 @@ ocultas. Fase 7.5 no fue iniciada.
 
 La decisión final y los resultados exactos de gates se registran en
 `phase-7-client-portal-test-results.md`.
+
+## Gate de Fase 7.5A
+
+Servicios administrativos y organizaciones/clientes internos consumen contratos reales.
+Las tres pantallas migradas dejaron de importar `AppStore` y seed. Usuarios, roles,
+permisos, auditoría y Personal permanecen ocultos.
+
+El gate frontend aprobó typecheck, 47 pruebas y build; el gate backend aprobó typecheck,
+lint, 120 pruebas, 6 auditorías de constraints y build. El runtime respondió live/ready
+200, `/me` sin token 401 y catálogo público 200.
+
+El smoke HTTP/PostgreSQL `PHASE75A_SMOKE_` cubrió servicios, dos organizaciones,
+memberships existentes, revocación, 403, 404, 409, visibilidad pública e aislamiento. El
+backend niega el UUID cross-tenant con 403 antes de consultar el repositorio; el detalle
+frontend lo presenta neutralmente como “Recurso no disponible”. La limpieza reportó
+`residualFixtures: 0`.
+
+No existe catálogo general seguro de usuarios asignables. Por ello añadir memberships y
+editar `accountManagerUserId` siguen diferidos y explicados, sin bloquear el resto. No se
+modificaron migraciones, tablas, OpenAPI o RBAC y no se ejecutaron operaciones Git de
+escritura.
+
+**Decisión:** Fase 7.5A queda técnicamente cerrada. Fase 7.5B no fue iniciada ni queda
+autorizada implícitamente por este cierre.

@@ -314,13 +314,11 @@ selectores de asignación se difieren; no se inventa un endpoint.
 ### Orden
 
 1. Servicios admin.
-2. Leads: lista, detalle, edición, asignación, transición y conversión.
-3. Organizaciones y memberships.
-4. Proyectos y miembros.
-5. Hitos y entregables.
-6. Tareas standalone/de proyecto.
-7. Tickets: asignación, prioridad, transición y comentarios internos.
-8. Ocultar auditoría, RBAC, notificaciones y métricas no respaldadas.
+2. Organizaciones/clientes y contactos existentes.
+3. Proyectos, miembros, hitos y entregables.
+4. Tareas.
+5. Prospectos y tickets.
+6. Personal queda diferido.
 
 ### Riesgos
 
@@ -341,6 +339,21 @@ globales interpretados como acceso total sin `organizations.access_all`.
 Unitarias de adapters/state machines visuales; integración por permiso/scope; E2E por rol
 `super_admin`, `admin`, `sales`, `support_agent`, `project_lead`, `contributor`; negativos
 cross-organization; concurrencia; paginación/búsqueda/orden; formularios y teclado.
+
+### Registro de Fase 7.5A
+
+El 4 de agosto de 2026 se completaron únicamente los puntos 1 y 2 del orden aprobado.
+Servicios administrativos y organizaciones/clientes consumen los contratos reales con
+TanStack Query, token fresco, gates visuales y autoridad backend. Se implementaron las
+memberships existentes, incluida su revocación.
+
+Crear memberships y asignar responsable interno quedaron diferidos porque el backend no
+expone un catálogo general seguro de usuarios candidatos. La UI explica y deshabilita solo
+esas acciones; no consulta Clerk ni usa seed. Usuarios, RBAC, auditoría y Personal siguen
+ocultos. Proyectos, tareas, prospectos y tickets internos no fueron iniciados.
+
+La evidencia está en `phase-7-internal-a-implementation.md` y
+`phase-7-internal-a-test-results.md`.
 
 ## 8. Fase 7.6 — Calidad y cierre
 
