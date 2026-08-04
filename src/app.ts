@@ -43,6 +43,14 @@ import type { TicketRepository } from "./modules/tickets/ticket.types.js";
 import { PostgresTicketRepository } from "./modules/tickets/ticket.repository.js";
 import { TicketService } from "./modules/tickets/ticket.service.js";
 import { ticketRoutes } from "./modules/tickets/ticket.routes.js";
+import type {
+  ClientInvitationRepository,
+  ClerkInvitationGateway,
+} from "./modules/client-invitations/client-invitation.types.js";
+import { PostgresClientInvitationRepository } from "./modules/client-invitations/client-invitation.repository.js";
+import { OfficialClerkInvitationGateway } from "./modules/client-invitations/client-invitation.clerk.js";
+import { ClientInvitationService } from "./modules/client-invitations/client-invitation.service.js";
+import { clientInvitationRoutes } from "./modules/client-invitations/client-invitation.routes.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -57,6 +65,8 @@ export interface BuildAppOptions {
   readonly projectRepository?: ProjectRepository;
   readonly taskRepository?: TaskRepository;
   readonly ticketRepository?: TicketRepository;
+  readonly clientInvitationRepository?: ClientInvitationRepository;
+  readonly clerkInvitationGateway?: ClerkInvitationGateway;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -141,6 +151,25 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(organizationRoutes, {
       prefix: "/api/v1",
       service: new OrganizationService(organizationRepository, authorization),
+    });
+  }
+
+  const hasClientInvitationDependencies =
+    (options.clientInvitationRepository !== undefined && options.clerkInvitationGateway !== undefined) ||
+    (app.databasePool !== null && config.CLERK_SECRET_KEY !== undefined);
+  if (hasClientInvitationDependencies) {
+    const repository = options.clientInvitationRepository ??
+      new PostgresClientInvitationRepository(app.databasePool!);
+    const clerk = options.clerkInvitationGateway ??
+      new OfficialClerkInvitationGateway(config.CLERK_SECRET_KEY!);
+    await app.register(clientInvitationRoutes, {
+      prefix: "/api/v1",
+      service: new ClientInvitationService(
+        repository,
+        new AuthorizationService(),
+        clerk,
+        config.CLIENT_APP_URL ?? config.CORS_ORIGINS[0]!,
+      ),
     });
   }
 

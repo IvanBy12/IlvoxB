@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ILVOX Backend API",
-    "version": "0.6.0",
-    "description": "Fase 6: tickets standalone, organizacionales y de proyecto; asignación, prioridad, transiciones, confirmación y comentarios con scopes SQL. No incluye archivos, almacenamiento, notificaciones, SLA ni frontend."
+    "version": "0.8.0",
+    "description": "Contrato acumulado hasta Fase 8A, incluidas invitaciones privadas de clientes con Clerk y autorización final en PostgreSQL. No incluye Personal, 8B, 8C, archivos, notificaciones ni RBAC administrativo."
   },
   "servers": [
     {
@@ -22,6 +22,9 @@
     },
     {
       "name": "Memberships"
+    },
+    {
+      "name": "Client Invitations"
     },
     {
       "name": "Projects"
@@ -951,6 +954,121 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
+        }
+      }
+    },
+    "/organizations/{organizationId}/invitations": {
+      "get": {
+        "tags": ["Client Invitations"],
+        "summary": "List client invitations for an authorized organization",
+        "security": [{ "clerkSession": [] }],
+        "x-permission": "organization_members.manage",
+        "x-scope": "organization ID in SQL; internal identity required",
+        "parameters": [{ "$ref": "#/components/parameters/OrganizationId" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "tags": ["Client Invitations"],
+        "summary": "Invite a client or grant a verified existing Clerk identity",
+        "description": "Only email and client_manager/client_contact are accepted. Organization, final role and status come from the URL and server-side invitation record.",
+        "security": [{ "clerkSession": [] }],
+        "x-permission": "organization_members.manage",
+        "x-scope": "organization ID in SQL; internal identity required",
+        "parameters": [{ "$ref": "#/components/parameters/OrganizationId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["email", "membershipRole"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "maxLength": 320 },
+                  "membershipRole": { "type": "string", "enum": ["client_manager", "client_contact"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Success" },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/organizations/{organizationId}/invitations/{invitationId}/resend": {
+      "post": {
+        "tags": ["Client Invitations"],
+        "summary": "Replace and resend a pending or expired invitation",
+        "security": [{ "clerkSession": [] }],
+        "x-permission": "organization_members.manage",
+        "x-rate-limit": "5 per hour",
+        "parameters": [
+          { "$ref": "#/components/parameters/OrganizationId" },
+          { "name": "invitationId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/organizations/{organizationId}/invitations/{invitationId}/revoke": {
+      "post": {
+        "tags": ["Client Invitations"],
+        "summary": "Revoke a pending invitation without deleting history or membership",
+        "security": [{ "clerkSession": [] }],
+        "x-permission": "organization_members.manage",
+        "parameters": [
+          { "$ref": "#/components/parameters/OrganizationId" },
+          { "name": "invitationId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/client-invitations/claim": {
+      "post": {
+        "tags": ["Client Invitations"],
+        "summary": "Claim an invitation using the active Clerk session",
+        "description": "Accepts only the opaque local invitation UUID. The backend verifies Clerk emails and reads organization and role from PostgreSQL.",
+        "security": [{ "clerkSession": [] }],
+        "x-rate-limit": "10 per minute",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["invitationId"],
+                "properties": { "invitationId": { "type": "string", "format": "uuid" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },

@@ -9,6 +9,7 @@ const EXPECTED_TABLES = [
   "files",
   "identity_webhook_events",
   "leads",
+  "organization_invitations",
   "organization_memberships",
   "organizations",
   "permissions",
@@ -29,6 +30,6 @@ describe("database schema", () => {
     const actualTables = schemaTables.map((table) => getTableName(table)).toSorted();
 
     expect(actualTables).toEqual([...EXPECTED_TABLES]);
-    expect(new Set(actualTables).size).toBe(19);
+    expect(new Set(actualTables).size).toBe(20);
   });
 });

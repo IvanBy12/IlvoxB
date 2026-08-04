@@ -13,6 +13,11 @@ export const ErrorCode = {
   ProfileInactive: "PROFILE_INACTIVE",
   Conflict: "CONFLICT",
   WebhookInvalid: "WEBHOOK_INVALID",
+  InvitationInvalid: "INVITATION_INVALID",
+  InvitationExpired: "INVITATION_EXPIRED",
+  InvitationRevoked: "INVITATION_REVOKED",
+  InvitationUsed: "INVITATION_USED",
+  InvitationEmailMismatch: "INVITATION_EMAIL_MISMATCH",
 } as const;
 
 export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];

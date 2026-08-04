@@ -64,6 +64,13 @@
       "when": 1785198997717,
       "tag": "0008_phase6-tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785871546293,
+      "tag": "0009_phase8a-client-invitations",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 export * from "./audit.js";
 export * from "./files.js";
 export * from "./identity.js";
+export * from "./invitations.js";
 export * from "./leads.js";
 export * from "./organizations.js";
 export * from "./projects.js";
@@ -12,6 +13,7 @@ export * from "./tickets.js";
 import { auditEvents } from "./audit.js";
 import { files } from "./files.js";
 import { appUsers, identityWebhookEvents } from "./identity.js";
+import { organizationInvitations } from "./invitations.js";
 import { leads } from "./leads.js";
 import { organizationMemberships, organizations } from "./organizations.js";
 import { deliverables, projectMembers, projectMilestones, projects } from "./projects.js";
@@ -29,6 +31,7 @@ export const schemaTables = [
   userRoles,
   organizations,
   organizationMemberships,
+  organizationInvitations,
   services,
   leads,
   projects,

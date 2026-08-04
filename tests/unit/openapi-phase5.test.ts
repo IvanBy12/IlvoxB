@@ -45,17 +45,25 @@ const phase6Operations = [
   "GET /tickets/{ticketId}/comments",
   "POST /tickets/{ticketId}/comments",
 ] as const;
+const phase8aOperations = [
+  "GET /organizations/{organizationId}/invitations",
+  "POST /organizations/{organizationId}/invitations",
+  "POST /organizations/{organizationId}/invitations/{invitationId}/resend",
+  "POST /organizations/{organizationId}/invitations/{invitationId}/revoke",
+  "POST /client-invitations/claim",
+] as const;
 
-describe("Phase 6 OpenAPI", () => {
-  it("retains Phase 5 and adds exactly the eleven implemented ticket operations", () => {
+describe("Accumulated OpenAPI through Phase 8A", () => {
+  it("retains Phase 5/6 and adds exactly the five invitation operations", () => {
     const operations = Object.entries(document.paths).flatMap(([path, item]) =>
       Object.keys(item)
         .filter((method) => methods.has(method))
         .map((method) => `${method.toUpperCase()} ${path}`));
-    expect(document.info.version).toBe("0.6.0");
-    expect(operations).toHaveLength(55);
+    expect(document.info.version).toBe("0.8.0");
+    expect(operations).toHaveLength(60);
     expect(phase5Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase6Operations.every((operation) => operations.includes(operation))).toBe(true);
+    expect(phase8aOperations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase5Operations).toHaveLength(24);
   });
 

@@ -70,6 +70,7 @@ const envSchema = z
     CLERK_WEBHOOK_SIGNING_SECRET: optionalString,
     CLERK_AUTHORIZED_PARTIES: optionalCsvUrls,
     CLERK_AUDIENCE: optionalCsv,
+    CLIENT_APP_URL: optionalUrl,
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV === "production" && env.DATABASE_URL === undefined) {

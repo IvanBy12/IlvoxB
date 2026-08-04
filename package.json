@@ -24,6 +24,7 @@
     "smoke:phase75a:internal": "tsx scripts/smoke-phase75a-internal.ts",
     "smoke:phase75b:internal": "tsx scripts/smoke-phase75b-internal.ts",
     "smoke:phase75c:internal": "tsx scripts/smoke-phase75c-internal.ts",
+    "smoke:phase8a:client-invitations": "tsx scripts/smoke-phase8a-client-invitations.ts",
     "bootstrap:owner": "tsx scripts/bootstrap-owner.ts",
     "check": "npm run typecheck && npm run lint && npm run test && npm run test:constraint-audit && npm run build",
     "db:generate": "drizzle-kit generate",
