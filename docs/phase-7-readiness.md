@@ -176,3 +176,35 @@ Añadir miembros, cambiar líder por selector general, catálogo general de assi
 desasignar tareas permanecen diferidos por contrato.
 
 **Decisión:** Fase 7.5B queda técnicamente cerrada. Fase 7.5C no fue iniciada.
+
+## Gate de Fase 7.5C
+
+Prospectos, Tickets internos y comentarios consumen contratos reales. Los cuatro
+componentes migrados dejaron de importar `AppStore` y seed. La nueva ruta
+`/app/prospectos/:id` concentra edición, historial, transición, asignación contextual y
+conversión.
+
+El smoke `PHASE75C_SMOKE_` cubrió dos organizaciones, tres conversiones de lead, tickets
+standalone/organización/proyecto, edición, asignación, desasignación, prioridad,
+transiciones, comentarios internos/cliente, 403/404/409 y aislamiento. La limpieza final
+reportó `residualFixtures: 0`.
+
+La defensa del portal permanece doble: filtrado backend por
+`ticket_comments.read_internal`, aserción `assertClientOnlyComments` en el cliente portal y
+supresión de conversación para identidades internas/duales en esa superficie. El área
+interna sí solicita el endpoint compartido cuando la ruta y el actor son internos.
+
+La revisión responsive 360/768/1024/1440 no mostró overflow. Se corrigió el único control
+sin nombre accesible en el disparador del menú de sesión. No cambiaron OpenAPI, tablas,
+migraciones o RBAC persistido y no hubo operaciones Git de escritura.
+
+La desasignación de leads permanece diferida porque el contrato exige UUID. Los selectores
+solo usan yo, responsable actual y miembros/líder de proyecto conocidos; no existe catálogo
+general. Personal y Fase 7.6 no se iniciaron.
+
+El gate frontend aprobó typecheck, 55 pruebas y build. El backend aprobó typecheck, lint,
+120 pruebas activas, 6 auditorías de constraints y build. Runtime respondió live/ready
+200, `/me` sin token 401 y catálogo público 200.
+
+**Decisión:** Fase 7.5C queda técnicamente cerrada con los gates documentados en
+`phase-7-internal-c-test-results.md` verdes.

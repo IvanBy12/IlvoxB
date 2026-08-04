@@ -530,3 +530,25 @@ diferido. Véanse `phase-7-internal-b-implementation.md` y
 
 **Decisión:** Fase 7.5B cerrada técnicamente; el siguiente bloque sigue siendo 7.5C y no
 fue iniciado por esta ejecución.
+
+## 17. Registro de ejecución de Fase 7.5C
+
+Fase 7.5C conectó exclusivamente Prospectos, Tickets internos y comentarios:
+
+- listados remotos con búsqueda, filtros y paginación;
+- ruta de detalle de prospecto y detalle de ticket existente migrado;
+- edición, asignación y transiciones mediante endpoints de intención;
+- los tres modos de conversión de lead con permisos reales;
+- prioridad operativa separada de la solicitada;
+- comentarios internos/cliente con visibilidad explícita y defensa portal dual;
+- `expectedUpdatedAt`, preservación de formularios tras 409 y mutaciones sin retry;
+- candidatos de asignación limitados a identidades conocidas por contexto;
+- smoke multi-organización `PHASE75C_SMOKE_` con limpieza cero;
+- responsive 360/768/1024/1440 y corrección del nombre accesible del menú de sesión.
+
+No se añadieron endpoints, tablas, migraciones, permisos RBAC ni catálogo general de
+usuarios. Desasignar leads continúa diferido porque el esquema no acepta `null`. Véanse
+`phase-7-internal-c-implementation.md` y `phase-7-internal-c-test-results.md`.
+
+**Decisión:** Fase 7.5C cerrada técnicamente. Personal y Fase 7.6 no fueron iniciadas ni
+quedan autorizadas implícitamente.

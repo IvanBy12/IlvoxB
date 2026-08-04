@@ -42,12 +42,12 @@ por PostgreSQL; no debe traducirse a un guard hardcoded.
 | `/app/administracion` | Ver servicio admin | API real | `/api/v1/admin/services/:serviceId` | GET | Bearer | `services.read` | global | `IMPLEMENTED_7_5A` | Detalle previo a edición |
 | `/app/administracion` | Crear servicio | API real | `/api/v1/admin/services` | POST | Bearer | `services.manage` | global, actor interno | `IMPLEMENTED_7_5A` | Formulario, doble submit y 409 |
 | `/app/administracion` | Editar/publicar/ocultar/activar | API real | `/api/v1/admin/services/:serviceId` | PATCH | Bearer | `services.manage` | global, actor interno | `IMPLEMENTED_7_5A` | Invalidación de cache interna/pública |
-| `/app/prospectos` | Listar/buscar/filtrar | Seed completo | `/api/v1/leads` | GET | Bearer | `leads.read` | global autorizado | `READY_WITH_ADAPTATION` | Server pagination/search/sort |
-| Sin detalle dedicado | Ver lead e historial | Tarjeta/fila | `/api/v1/leads/:leadId` | GET | Bearer | `leads.read` | global autorizado | `FRONTEND_MISSING` | Drawer o ruta de detalle |
-| Sin pantalla | Editar datos comerciales | No existe | `/api/v1/leads/:leadId` | PATCH | Bearer | `leads.manage` | global, actor interno | `FRONTEND_MISSING` | No enviar estado/asignación |
-| `/app/prospectos` | Mover estado | Kanban sin reglas | `/api/v1/leads/:leadId/transition` | POST | Bearer | `leads.manage` | global, actor interno | `READY_WITH_ADAPTATION` | Solo transiciones permitidas y reason |
-| Sin control explícito | Asignar responsable | IDs del seed | `/api/v1/leads/:leadId/assign` | POST | Bearer | `leads.manage` | global, actor interno | `FRONTEND_MISSING` | Selector de usuarios locales elegibles |
-| `/app/prospectos` | Convertir | Crea “cliente” local | `/api/v1/leads/:leadId/convert` | POST | Bearer | `leads.manage`; también `organizations.manage` si aplica | global | `READY_WITH_ADAPTATION` | Elegir standalone/crear/reusar organización; 409 |
+| `/app/prospectos` | Listar/buscar/filtrar | API real | `/api/v1/leads` | GET | Bearer | `leads.read` | global autorizado | `IMPLEMENTED_7_5C` | Paginación, búsqueda, estado y orden remotos |
+| `/app/prospectos/:id` | Ver lead e historial | API real | `/api/v1/leads/:leadId` | GET | Bearer | `leads.read` | global autorizado | `IMPLEMENTED_7_5C` | Ruta dedicada y 403/404 neutral |
+| `/app/prospectos/:id` | Editar datos comerciales | API real | `/api/v1/leads/:leadId` | PATCH | Bearer | `leads.manage` | global, actor interno | `IMPLEMENTED_7_5C` | No envía estado ni asignación en PATCH |
+| `/app/prospectos/:id` | Transicionar estado | API real | `/api/v1/leads/:leadId/transition` | POST | Bearer | `leads.manage` | global, actor interno | `IMPLEMENTED_7_5C` | Solo targets adyacentes y reason contractual |
+| `/app/prospectos/:id` | Asignar responsable | Yo/responsable actual | `/api/v1/leads/:leadId/assign` | POST | Bearer | `leads.manage` | global, actor interno | `IMPLEMENTED_7_5C` | Sin catálogo general; desasignación diferida porque no acepta `null` |
+| `/app/prospectos/:id` | Convertir | API real | `/api/v1/leads/:leadId/convert` | POST | Bearer | `leads.manage`; también `organizations.manage` si aplica | global | `IMPLEMENTED_7_5C` | Standalone/crear/reusar; 409 conserva contexto |
 
 ## Organizaciones y memberships
 
@@ -65,35 +65,35 @@ por PostgreSQL; no debe traducirse a un guard hardcoded.
 
 | Ruta o pantalla | Acción UI | Datos actuales | Endpoint real | Método | Autenticación | Permiso | Scope | Estado | Adaptación necesaria |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Listas/dashboard/portal | Listar proyectos | Seed y filtro navegador | `/api/v1/projects` | GET | Bearer | `projects.read` | global/organization/project | `READY_WITH_ADAPTATION` | Paginación, filtros y sin `avance` |
-| Sin pantalla | Crear proyecto | No existe | `/api/v1/projects` | POST | Bearer | `projects.manage` | global/project autorizado | `FRONTEND_MISSING` | Fechas, servicio y lead elegibles |
-| Detalles interno/portal | Ver proyecto | Seed | `/api/v1/projects/:projectId` | GET | Bearer | `projects.read` | global/organization/project | `READY_WITH_ADAPTATION` | Consultas relacionadas y 404 scoped |
-| Sin edición | Editar datos generales | No existe | `/api/v1/projects/:projectId` | PATCH | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | `expectedUpdatedAt`; no status/lead/org |
+| Listas/dashboard/portal | Listar proyectos | API real | `/api/v1/projects` | GET | Bearer | `projects.read` | global/organization/project | `IMPLEMENTED_7_5B` | Paginación, filtros y sin `avance` |
+| `/app/proyectos` | Crear proyecto | API real | `/api/v1/projects` | POST | Bearer | `projects.manage` | global/project autorizado | `IMPLEMENTED_7_5B` | Fechas, servicio y líder conocido |
+| Detalles interno/portal | Ver proyecto | API real | `/api/v1/projects/:projectId` | GET | Bearer | `projects.read` | global/organization/project | `IMPLEMENTED_7_5B` | Consultas relacionadas y 404 scoped |
+| `/app/proyectos/:id` | Editar datos generales | API real | `/api/v1/projects/:projectId` | PATCH | Bearer | `projects.manage` | global/project | `IMPLEMENTED_7_5B` | `expectedUpdatedAt`; no status/lead/org |
 | Sin control | Asignar líder | Seed embebido | `/api/v1/projects/:projectId/assign` | POST | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | Usuario elegible y concurrencia |
-| Sin control | Transicionar estado | Solo lectura | `/api/v1/projects/:projectId/transition` | POST | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | State machine, reason y gates |
-| Detalle interno | Listar miembros | `equipoIds` | `/api/v1/projects/:projectId/members` | GET | Bearer | `projects.read` | global/project | `READY_WITH_ADAPTATION` | Recurso separado y estados |
+| `/app/proyectos/:id` | Transicionar estado | API real | `/api/v1/projects/:projectId/transition` | POST | Bearer | `projects.manage` | global/project | `IMPLEMENTED_7_5B` | State machine, reason y gates |
+| Detalle interno | Listar miembros | API real | `/api/v1/projects/:projectId/members` | GET | Bearer | `projects.read` | global/project | `IMPLEMENTED_7_5B` | Recurso separado y estados |
 | Sin pantalla | Añadir miembro | No existe | `/api/v1/projects/:projectId/members` | POST | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | Roles project_* |
-| Sin pantalla | Cambiar rol | No existe | `/api/v1/projects/:projectId/members/:memberId` | PATCH | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | `expectedUpdatedAt` |
-| Sin pantalla | Revocar miembro | No existe | `/api/v1/projects/:projectId/members/:memberId/revoke` | POST | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | Confirmación y concurrencia |
-| Detalles interno/portal | Listar hitos | Embebidos | `/api/v1/projects/:projectId/milestones` | GET | Bearer | `projects.read` | global/organization/project | `READY_WITH_ADAPTATION` | Loading independiente |
-| Sin pantalla | Crear hito | No existe | `/api/v1/projects/:projectId/milestones` | POST | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | Validar rango de fechas |
-| Sin pantalla | Ver hito | Embebido | `/api/v1/projects/:projectId/milestones/:milestoneId` | GET | Bearer | `projects.read` | global/organization/project | `FRONTEND_MISSING` | Drawer opcional |
-| Sin pantalla | Editar/estado hito | No existe | `/api/v1/projects/:projectId/milestones/:milestoneId` | PATCH | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | Estado y `expectedUpdatedAt` |
-| Detalles/dashboard/portal | Listar entregables | Embebidos | `/api/v1/projects/:projectId/deliverables` | GET | Bearer | `projects.read` | global/organization/project | `READY_WITH_ADAPTATION` | Status multivalor, no booleano |
-| Sin pantalla | Crear entregable | No existe | `/api/v1/projects/:projectId/deliverables` | POST | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | Milestone opcional |
-| Sin pantalla | Ver entregable | Embebido | `/api/v1/projects/:projectId/deliverables/:deliverableId` | GET | Bearer | `projects.read` | global/organization/project | `FRONTEND_MISSING` | Drawer opcional |
-| Sin pantalla | Editar/aprobar entregable | No existe | `/api/v1/projects/:projectId/deliverables/:deliverableId` | PATCH | Bearer | `projects.manage` | global/project | `FRONTEND_MISSING` | Status, actor de aprobación y concurrencia |
+| `/app/proyectos/:id` | Cambiar rol | API real | `/api/v1/projects/:projectId/members/:memberId` | PATCH | Bearer | `projects.manage` | global/project | `IMPLEMENTED_7_5B` | `expectedUpdatedAt` |
+| `/app/proyectos/:id` | Revocar miembro | API real | `/api/v1/projects/:projectId/members/:memberId/revoke` | POST | Bearer | `projects.manage` | global/project | `IMPLEMENTED_7_5B` | Confirmación y concurrencia |
+| Detalles interno/portal | Listar hitos | API real | `/api/v1/projects/:projectId/milestones` | GET | Bearer | `projects.read` | global/organization/project | `IMPLEMENTED_7_5B` | Loading independiente |
+| `/app/proyectos/:id` | Crear hito | API real | `/api/v1/projects/:projectId/milestones` | POST | Bearer | `projects.manage` | global/project | `IMPLEMENTED_7_5B` | Valida rango de fechas |
+| `/app/proyectos/:id` | Ver hito | API real | `/api/v1/projects/:projectId/milestones/:milestoneId` | GET | Bearer | `projects.read` | global/organization/project | `IMPLEMENTED_7_5B` | Formulario contextual |
+| `/app/proyectos/:id` | Editar/estado hito | API real | `/api/v1/projects/:projectId/milestones/:milestoneId` | PATCH | Bearer | `projects.manage` | global/project | `IMPLEMENTED_7_5B` | Estado y `expectedUpdatedAt` |
+| Detalles/dashboard/portal | Listar entregables | API real | `/api/v1/projects/:projectId/deliverables` | GET | Bearer | `projects.read` | global/organization/project | `IMPLEMENTED_7_5B` | Status multivalor, no booleano |
+| `/app/proyectos/:id` | Crear entregable | API real | `/api/v1/projects/:projectId/deliverables` | POST | Bearer | `projects.manage` | global/project | `IMPLEMENTED_7_5B` | Milestone opcional |
+| `/app/proyectos/:id` | Ver entregable | API real | `/api/v1/projects/:projectId/deliverables/:deliverableId` | GET | Bearer | `projects.read` | global/organization/project | `IMPLEMENTED_7_5B` | Formulario contextual |
+| `/app/proyectos/:id` | Editar/aprobar entregable | API real | `/api/v1/projects/:projectId/deliverables/:deliverableId` | PATCH | Bearer | `projects.manage` | global/project | `IMPLEMENTED_7_5B` | Status, actor de aprobación y concurrencia |
 
 ## Tareas
 
 | Ruta o pantalla | Acción UI | Datos actuales | Endpoint real | Método | Autenticación | Permiso | Scope | Estado | Adaptación necesaria |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/app/tareas`, proyecto | Listar tareas | Seed completo | `/api/v1/tasks` | GET | Bearer | `tasks.read` | global/project | `READY_WITH_ADAPTATION` | Paginación, filtros, estados y minutos |
-| `/app/tareas` | Crear tarea | Mutación local | `/api/v1/tasks` | POST | Bearer | `tasks.manage` | global para standalone; project para asociada | `READY_WITH_ADAPTATION` | Quitar ticket, descripción obligatoria |
-| Sin detalle | Ver tarea | Tarjeta | `/api/v1/tasks/:taskId` | GET | Bearer | `tasks.read` | global/project | `FRONTEND_MISSING` | Drawer/ruta |
-| Sin edición | Editar tarea | No existe | `/api/v1/tasks/:taskId` | PATCH | Bearer | `tasks.manage` | global/project | `FRONTEND_MISSING` | `expectedUpdatedAt` |
-| Sin control dedicado | Asignar | Se define al crear | `/api/v1/tasks/:taskId/assign` | POST | Bearer | `tasks.manage` | global/project | `FRONTEND_MISSING` | Elegibilidad y concurrencia |
-| `/app/tareas` | Mover estado | Drag libre | `/api/v1/tasks/:taskId/transition` | POST | Bearer | `tasks.manage` | global/project | `READY_WITH_ADAPTATION` | State machine, rol, assignee y reason |
+| `/app/tareas`, proyecto | Listar tareas | API real | `/api/v1/tasks` | GET | Bearer | `tasks.read` | global/project | `IMPLEMENTED_7_5B` | Paginación, filtros, estados y minutos |
+| `/app/tareas` | Crear tarea | API real | `/api/v1/tasks` | POST | Bearer | `tasks.manage` | global para standalone; project para asociada | `IMPLEMENTED_7_5B` | Sin ticket; descripción obligatoria |
+| `/app/tareas` | Ver tarea | API real | `/api/v1/tasks/:taskId` | GET | Bearer | `tasks.read` | global/project | `IMPLEMENTED_7_5B` | Diálogo contextual |
+| `/app/tareas` | Editar tarea | API real | `/api/v1/tasks/:taskId` | PATCH | Bearer | `tasks.manage` | global/project | `IMPLEMENTED_7_5B` | `expectedUpdatedAt` |
+| `/app/tareas` | Asignar | Usuarios conocidos | `/api/v1/tasks/:taskId/assign` | POST | Bearer | `tasks.manage` | global/project | `IMPLEMENTED_7_5B` | Elegibilidad y concurrencia; desasignación diferida |
+| `/app/tareas` | Transicionar estado | API real | `/api/v1/tasks/:taskId/transition` | POST | Bearer | `tasks.manage` | global/project | `IMPLEMENTED_7_5B` | State machine, rol, assignee y reason |
 | Portal | Ver tareas de cliente | Filtro posible en seed, sin ruta | — utilizable por roles cliente actuales | — | — | — | — | `HIDE_TEMPORARILY` | RBAC no concede tareas a client roles |
 | Cualquier pantalla | Crear tarea desde ticket | `ticketId` mock | — | — | — | — | — | `REMOVE` | Backend no soporta relación directa |
 
@@ -101,18 +101,18 @@ por PostgreSQL; no debe traducirse a un guard hardcoded.
 
 | Ruta o pantalla | Acción UI | Datos actuales | Endpoint real | Método | Autenticación | Permiso | Scope | Estado | Adaptación necesaria |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Listas/dashboard | Listar/buscar/filtrar | Seed | `/api/v1/tickets` | GET | Bearer | `tickets.read` | global/organization/project/own | `READY_WITH_ADAPTATION` | Paginación y filtros remotos |
-| Portal | Crear ticket | Mutación local | `/api/v1/tickets` | POST | Bearer | `tickets.create` | organization/project/own | `READY_WITH_ADAPTATION` | No enviar requester; `requestedPriority` |
-| Detalles interno/portal | Ver ticket | Seed | `/api/v1/tickets/:ticketId` | GET | Bearer | `tickets.read` | global/organization/project/own | `READY_WITH_ADAPTATION` | 404 scoped y timestamps |
-| Sin pantalla | Editar subject/description/requested priority | No existe | `/api/v1/tickets/:ticketId` | PATCH | Bearer | `tickets.update` | global/organization/project/own | `FRONTEND_MISSING` | `expectedUpdatedAt` |
-| Detalle interno | Asignar/desasignar | Responsable hardcoded | `/api/v1/tickets/:ticketId/assign` | POST | Bearer | `tickets.assign` | global/project | `FRONTEND_MISSING` | Selector elegible y `updatedAt` |
-| Detalle interno | Cambiar prioridad operativa | Selector no existe | `/api/v1/tickets/:ticketId/priority` | POST | Bearer | `tickets.change_priority` | global/project | `FRONTEND_MISSING` | Separar solicitada/operativa |
-| Detalle interno | Transicionar/resolver/cerrar | Selector libre + resolver local | `/api/v1/tickets/:ticketId/transition` | POST | Bearer | `tickets.change_status`, `tickets.resolve` o `tickets.close` | global/project | `READY_WITH_ADAPTATION` | Solo targets permitidos, resolution/reason y concurrencia |
-| Portal detalle | Confirmar solución | Cambia estado local | `/api/v1/tickets/:ticketId/confirm` | POST | Bearer | `tickets.confirm_resolution` | own/organization autorizado | `READY_WITH_ADAPTATION` | `decision=confirm`, confirmación UI, `updatedAt` |
-| Portal detalle | Rechazar solución | No existe | `/api/v1/tickets/:ticketId/confirm` | POST | Bearer | `tickets.reject_resolution` | own/organization autorizado | `FRONTEND_MISSING` | `decision=reject`, reason obligatorio |
-| Portal detalle | Reabrir cerrado | No existe | `/api/v1/tickets/:ticketId/reopen` | POST | Bearer | `tickets.request_reopen` | own/organization autorizado | `FRONTEND_MISSING` | Reason obligatorio; solo closed |
-| Detalles | Listar comentarios | Embebidos | `/api/v1/tickets/:ticketId/comments` | GET | Bearer | `tickets.read`; internos según `ticket_comments.read_internal` | hereda ticket | `READY_WITH_ADAPTATION` | No filtrar seguridad solo en navegador |
-| Detalles | Comentar | Mutación local | `/api/v1/tickets/:ticketId/comments` | POST | Bearer | `ticket_comments.create_client` o `.create_internal` | hereda ticket | `READY_WITH_ADAPTATION` | Visibilidad por capacidad; texto plano |
+| `/app/tickets` | Listar/buscar/filtrar | API real | `/api/v1/tickets` | GET | Bearer | `tickets.read` | global/organization/project/own | `IMPLEMENTED_7_5C` | Paginación y filtros remotos |
+| Portal | Crear ticket | API real | `/api/v1/tickets` | POST | Bearer | `tickets.create` | organization/project/own | `IMPLEMENTED_7_4` | No envía requester ni prioridad operativa |
+| Detalles interno/portal | Ver ticket | API real | `/api/v1/tickets/:ticketId` | GET | Bearer | `tickets.read` | global/organization/project/own | `IMPLEMENTED_7_5C` | Interno migrado en 7.5C; portal ya migrado en 7.4 |
+| `/app/tickets/:id` | Editar subject/description/requested priority | API real | `/api/v1/tickets/:ticketId` | PATCH | Bearer | `tickets.update` | global/organization/project/own | `IMPLEMENTED_7_5C` | `expectedUpdatedAt` y conservación tras 409 |
+| `/app/tickets/:id` | Asignar/desasignar | Usuarios contextuales | `/api/v1/tickets/:ticketId/assign` | POST | Bearer | `tickets.assign` | global/project | `IMPLEMENTED_7_5C` | Yo, actual, líder/miembros; `updatedAt` |
+| `/app/tickets/:id` | Cambiar prioridad operativa | API real | `/api/v1/tickets/:ticketId/priority` | POST | Bearer | `tickets.change_priority` | global/project | `IMPLEMENTED_7_5C` | Separada de prioridad solicitada |
+| `/app/tickets/:id` | Transicionar/resolver/cerrar | API real | `/api/v1/tickets/:ticketId/transition` | POST | Bearer | `tickets.change_status`, `tickets.resolve` o `tickets.close` | global/project | `IMPLEMENTED_7_5C` | Solo targets por permiso, resolution/reason y concurrencia |
+| Portal detalle | Confirmar solución | API real | `/api/v1/tickets/:ticketId/confirm` | POST | Bearer | `tickets.confirm_resolution` | own/organization autorizado | `IMPLEMENTED_7_4` | `decision=confirm` y `updatedAt` |
+| Portal detalle | Rechazar solución | API real | `/api/v1/tickets/:ticketId/confirm` | POST | Bearer | `tickets.reject_resolution` | own/organization autorizado | `IMPLEMENTED_7_4` | `decision=reject`, reason obligatorio |
+| Portal detalle | Reabrir cerrado | API real | `/api/v1/tickets/:ticketId/reopen` | POST | Bearer | `tickets.request_reopen` | own/organization autorizado | `IMPLEMENTED_7_4` | Reason obligatorio; solo closed |
+| Detalles | Listar comentarios | API real | `/api/v1/tickets/:ticketId/comments` | GET | Bearer | `tickets.read`; internos según `ticket_comments.read_internal` | hereda ticket | `IMPLEMENTED_7_5C` | Backend filtra portal; defensa dual impide consulta desde portal interno |
+| Detalles | Comentar | API real | `/api/v1/tickets/:ticketId/comments` | POST | Bearer | `ticket_comments.create_client` o `.create_internal` | hereda ticket | `IMPLEMENTED_7_5C` | Visibilidad explícita por capacidad; texto plano |
 
 ## Funciones sin endpoint o sin pantalla
 
