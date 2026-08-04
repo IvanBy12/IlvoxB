@@ -2,8 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildTestApp } from "../helpers/build-test-app.js";
 
-const ALLOWED_ORIGIN = "http://127.0.0.1:5173";
-const DISALLOWED_ORIGIN = "http://localhost:5173";
+const LOCAL_ORIGINS = [
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+] as const;
+const DISALLOWED_ORIGIN = "https://attacker.example";
 
 describe("local CORS contract", () => {
   let app: FastifyInstance | undefined;
@@ -13,16 +16,16 @@ describe("local CORS contract", () => {
     app = undefined;
   });
 
-  it("allows the canonical local origin", async () => {
+  it.each(LOCAL_ORIGINS)("allows the local origin %s", async (origin) => {
     app = await buildTestApp();
     const response = await app.inject({
       method: "GET",
       url: "/health/live",
-      headers: { origin: ALLOWED_ORIGIN },
+      headers: { origin },
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.headers["access-control-allow-origin"]).toBe(ALLOWED_ORIGIN);
+    expect(response.headers["access-control-allow-origin"]).toBe(origin);
     expect(response.headers["access-control-allow-credentials"]).toBe("true");
     expect(response.headers["access-control-expose-headers"]?.toLowerCase()).toContain(
       "retry-after",
@@ -32,7 +35,7 @@ describe("local CORS contract", () => {
     );
   });
 
-  it("does not grant CORS to a different local origin", async () => {
+  it("does not grant CORS to an external origin", async () => {
     app = await buildTestApp();
     const response = await app.inject({
       method: "GET",
@@ -44,22 +47,25 @@ describe("local CORS contract", () => {
     expect(response.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
-  it("allows Authorization in preflight for the canonical origin", async () => {
-    app = await buildTestApp();
-    const response = await app.inject({
-      method: "OPTIONS",
-      url: "/me",
-      headers: {
-        origin: ALLOWED_ORIGIN,
-        "access-control-request-method": "GET",
-        "access-control-request-headers": "authorization",
-      },
-    });
+  it.each(LOCAL_ORIGINS)(
+    "allows Authorization in preflight for the local origin %s",
+    async (origin) => {
+      app = await buildTestApp();
+      const response = await app.inject({
+        method: "OPTIONS",
+        url: "/me",
+        headers: {
+          origin,
+          "access-control-request-method": "GET",
+          "access-control-request-headers": "authorization",
+        },
+      });
 
-    expect(response.statusCode).toBe(204);
-    expect(response.headers["access-control-allow-origin"]).toBe(ALLOWED_ORIGIN);
-    expect(response.headers["access-control-allow-headers"]?.toLowerCase()).toContain(
-      "authorization",
-    );
-  });
+      expect(response.statusCode).toBe(204);
+      expect(response.headers["access-control-allow-origin"]).toBe(origin);
+      expect(response.headers["access-control-allow-headers"]?.toLowerCase()).toContain(
+        "authorization",
+      );
+    },
+  );
 });
