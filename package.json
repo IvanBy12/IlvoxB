@@ -26,7 +26,10 @@
     "smoke:phase75c:internal": "tsx scripts/smoke-phase75c-internal.ts",
     "smoke:phase8a:client-invitations": "tsx scripts/smoke-phase8a-client-invitations.ts",
     "smoke:phase8b:service-needs": "tsx scripts/smoke-phase8b-service-needs.ts",
+    "smoke:phase8c:diagnostic": "tsx scripts/smoke-phase8c-diagnostic.ts",
     "seed:service-needs": "tsx scripts/seed-service-needs.ts",
+    "seed:public-catalog": "tsx scripts/seed-public-catalog.ts",
+    "seed:diagnostic": "tsx scripts/seed-diagnostic.ts",
     "bootstrap:owner": "tsx scripts/bootstrap-owner.ts",
     "check": "npm run typecheck && npm run lint && npm run test && npm run test:constraint-audit && npm run build",
     "db:generate": "drizzle-kit generate",
@@ -45,7 +48,8 @@
     "audit:parity": "node scripts/audit-drizzle-parity.mjs",
     "audit:constraint-names": "node scripts/audit-constraint-names.mjs",
     "openapi:phase5": "node scripts/generate-phase5-openapi.mjs",
-    "openapi:phase6": "node scripts/generate-phase6-openapi.mjs"
+    "openapi:phase6": "node scripts/generate-phase6-openapi.mjs",
+    "openapi:phase8c": "node scripts/generate-phase8c-openapi.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.12.0",

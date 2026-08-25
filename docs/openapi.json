@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ILVOX Backend API",
-    "version": "0.8.1",
-    "description": "Contrato acumulado hasta Fase 8B, incluida la taxonomía pública y la administración de necesidades vinculadas a servicios. No incluye Personal, 8C, diagnóstico persistente, archivos, notificaciones ni RBAC administrativo."
+    "version": "0.8.2",
+    "description": "Fase 8C: simulador diagnóstico determinista y versionado. Las respuestas puntúan necesidades y las necesidades puntúan servicios mediante las relaciones públicas/activas de 8B. Sin IA."
   },
   "servers": [
     {
@@ -49,6 +49,9 @@
     },
     {
       "name": "Ticket Comments"
+    },
+    {
+      "name": "Diagnostic"
     }
   ],
   "paths": {
@@ -300,53 +303,340 @@
     },
     "/service-needs": {
       "get": {
-        "tags": ["Service Needs"], "summary": "List public active service needs", "security": [], "x-permission": "public", "x-scope": "is_public=true AND is_active=true", "x-rate-limit": "60 per minute",
-        "parameters": [{ "$ref": "#/components/parameters/Page" }, { "$ref": "#/components/parameters/PageSize" }, { "$ref": "#/components/parameters/Search" }],
-        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/ValidationError" }, "429": { "$ref": "#/components/responses/RateLimited" } }
+        "tags": [
+          "Service Needs"
+        ],
+        "summary": "List public active service needs",
+        "security": [],
+        "x-permission": "public",
+        "x-scope": "is_public=true AND is_active=true",
+        "x-rate-limit": "60 per minute",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
       }
     },
     "/service-needs/{needId}": {
       "get": {
-        "tags": ["Service Needs"], "summary": "Get a public active service need", "security": [], "x-permission": "public", "x-rate-limit": "60 per minute",
-        "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
-        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/NotFound" }, "429": { "$ref": "#/components/responses/RateLimited" } }
+        "tags": [
+          "Service Needs"
+        ],
+        "summary": "Get a public active service need",
+        "security": [],
+        "x-permission": "public",
+        "x-rate-limit": "60 per minute",
+        "parameters": [
+          {
+            "name": "needId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
       }
     },
     "/service-needs/{needId}/services": {
       "get": {
-        "tags": ["Service Needs"], "summary": "List related public active services ordered by primary and weight", "security": [], "x-permission": "public", "x-rate-limit": "60 per minute",
-        "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
-        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/NotFound" }, "429": { "$ref": "#/components/responses/RateLimited" } }
+        "tags": [
+          "Service Needs"
+        ],
+        "summary": "List related public active services ordered by primary and weight",
+        "security": [],
+        "x-permission": "public",
+        "x-rate-limit": "60 per minute",
+        "parameters": [
+          {
+            "name": "needId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
       }
     },
     "/admin/service-needs": {
       "get": {
-        "tags": ["Service Needs"], "summary": "List service needs for internal administration", "security": [{ "clerkSession": [] }], "x-permission": "services.read", "x-scope": "global",
-        "parameters": [{ "$ref": "#/components/parameters/Page" }, { "$ref": "#/components/parameters/PageSize" }, { "$ref": "#/components/parameters/Search" }, { "name": "isPublic", "in": "query", "schema": { "type": "boolean" } }, { "name": "isActive", "in": "query", "schema": { "type": "boolean" } }],
-        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+        "tags": [
+          "Service Needs"
+        ],
+        "summary": "List service needs for internal administration",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "services.read",
+        "x-scope": "global",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Search"
+          },
+          {
+            "name": "isPublic",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       },
       "post": {
-        "tags": ["Service Needs"], "summary": "Create a service need", "security": [{ "clerkSession": [] }], "x-permission": "services.manage", "x-scope": "global internal actor",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceNeedCreate" } } } },
-        "responses": { "201": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/ValidationError" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" }, "409": { "$ref": "#/components/responses/Conflict" } }
+        "tags": [
+          "Service Needs"
+        ],
+        "summary": "Create a service need",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "services.manage",
+        "x-scope": "global internal actor",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceNeedCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/admin/service-needs/{needId}": {
       "get": {
-        "tags": ["Service Needs"], "summary": "Get a service need and all relationships", "security": [{ "clerkSession": [] }], "x-permission": "services.read", "x-scope": "global", "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
-        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+        "tags": [
+          "Service Needs"
+        ],
+        "summary": "Get a service need and all relationships",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "services.read",
+        "x-scope": "global",
+        "parameters": [
+          {
+            "name": "needId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       },
       "patch": {
-        "tags": ["Service Needs"], "summary": "Update, order, publish, hide, activate, or deactivate a service need", "security": [{ "clerkSession": [] }], "x-permission": "services.manage", "x-scope": "global internal actor", "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceNeedPatch" } } } },
-        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/ValidationError" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+        "tags": [
+          "Service Needs"
+        ],
+        "summary": "Update, order, publish, hide, activate, or deactivate a service need",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "services.manage",
+        "x-scope": "global internal actor",
+        "parameters": [
+          {
+            "name": "needId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceNeedPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/admin/service-needs/{needId}/services": {
       "put": {
-        "tags": ["Service Needs"], "summary": "Transactionally replace service relationships", "security": [{ "clerkSession": [] }], "x-permission": "services.manage", "x-scope": "global internal actor", "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceNeedLinksReplace" } } } },
-        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/ValidationError" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+        "tags": [
+          "Service Needs"
+        ],
+        "summary": "Transactionally replace service relationships",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "services.manage",
+        "x-scope": "global internal actor",
+        "parameters": [
+          {
+            "name": "needId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceNeedLinksReplace"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       }
     },
     "/leads": {
@@ -1013,26 +1303,52 @@
     },
     "/organizations/{organizationId}/invitations": {
       "get": {
-        "tags": ["Client Invitations"],
+        "tags": [
+          "Client Invitations"
+        ],
         "summary": "List client invitations for an authorized organization",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "organization_members.manage",
         "x-scope": "organization ID in SQL; internal identity required",
-        "parameters": [{ "$ref": "#/components/parameters/OrganizationId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "post": {
-        "tags": ["Client Invitations"],
+        "tags": [
+          "Client Invitations"
+        ],
         "summary": "Invite a client or grant a verified existing Clerk identity",
         "description": "Only email and client_manager/client_contact are accepted. Organization, final role and status come from the URL and server-side invitation record.",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "organization_members.manage",
         "x-scope": "organization ID in SQL; internal identity required",
-        "parameters": [{ "$ref": "#/components/parameters/OrganizationId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1040,68 +1356,147 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["email", "membershipRole"],
+                "required": [
+                  "email",
+                  "membershipRole"
+                ],
                 "properties": {
-                  "email": { "type": "string", "format": "email", "maxLength": 320 },
-                  "membershipRole": { "type": "string", "enum": ["client_manager", "client_contact"] }
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 320
+                  },
+                  "membershipRole": {
+                    "type": "string",
+                    "enum": [
+                      "client_manager",
+                      "client_contact"
+                    ]
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "$ref": "#/components/responses/Success" },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/organizations/{organizationId}/invitations/{invitationId}/resend": {
       "post": {
-        "tags": ["Client Invitations"],
+        "tags": [
+          "Client Invitations"
+        ],
         "summary": "Replace and resend a pending or expired invitation",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "organization_members.manage",
         "x-rate-limit": "5 per hour",
         "parameters": [
-          { "$ref": "#/components/parameters/OrganizationId" },
-          { "name": "invitationId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          },
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/organizations/{organizationId}/invitations/{invitationId}/revoke": {
       "post": {
-        "tags": ["Client Invitations"],
+        "tags": [
+          "Client Invitations"
+        ],
         "summary": "Revoke a pending invitation without deleting history or membership",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-permission": "organization_members.manage",
         "parameters": [
-          { "$ref": "#/components/parameters/OrganizationId" },
-          { "name": "invitationId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          },
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
         ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
     "/client-invitations/claim": {
       "post": {
-        "tags": ["Client Invitations"],
+        "tags": [
+          "Client Invitations"
+        ],
         "summary": "Claim an invitation using the active Clerk session",
         "description": "Accepts only the opaque local invitation UUID. The backend verifies Clerk emails and reads organization and role from PostgreSQL.",
-        "security": [{ "clerkSession": [] }],
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
         "x-rate-limit": "10 per minute",
         "requestBody": {
           "required": true,
@@ -1110,19 +1505,38 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["invitationId"],
-                "properties": { "invitationId": { "type": "string", "format": "uuid" } }
+                "required": [
+                  "invitationId"
+                ],
+                "properties": {
+                  "invitationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
               }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/Success" },
-          "401": { "$ref": "#/components/responses/Unauthenticated" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
@@ -3009,6 +3423,216 @@
           }
         }
       }
+    },
+    "/diagnostic": {
+      "get": {
+        "tags": [
+          "Diagnostic"
+        ],
+        "summary": "Get the currently published diagnostic questionnaire",
+        "description": "Returns only the published ruleset, active questions and options. Scoring rules and points are never exposed.",
+        "security": [],
+        "x-rate-limit": "30 per minute",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/diagnostic/evaluate": {
+      "post": {
+        "tags": [
+          "Diagnostic"
+        ],
+        "summary": "Evaluate and snapshot a diagnostic",
+        "description": "The server validates the current ruleset and answers, scores needs, reuses current public/active service_need_links, stores an immutable snapshot and returns no internal scores.",
+        "security": [],
+        "x-rate-limit": "10 per minute",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiagnosticEvaluation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/leads/{leadId}/diagnostic": {
+      "get": {
+        "tags": [
+          "Leads",
+          "Diagnostic"
+        ],
+        "summary": "Get the immutable diagnostic snapshot associated with an authorized lead",
+        "description": "Uses the same SQL scope as the lead and never recalculates the historical result.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "leads.read",
+        "x-scope": "Identical SQL scope to lead detail; out-of-scope and absent diagnostics return 404",
+        "parameters": [
+          {
+            "name": "leadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/diagnostic": {
+      "get": {
+        "tags": [
+          "Diagnostic"
+        ],
+        "summary": "Get published and current draft diagnostic versions",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "services.read",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/admin/diagnostic/draft": {
+      "put": {
+        "tags": [
+          "Diagnostic"
+        ],
+        "summary": "Replace the editable draft configuration transactionally",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "services.manage",
+        "description": "Published versions are immutable. Option rules point only to service needs, never directly to services.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiagnosticDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/admin/diagnostic/publish": {
+      "post": {
+        "tags": [
+          "Diagnostic"
+        ],
+        "summary": "Transactionally publish the draft and create the next editable version",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "services.manage",
+        "description": "Archives the previous published ruleset, publishes the complete draft and clones a new draft in one transaction.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3132,33 +3756,133 @@
     },
     "schemas": {
       "ServiceNeedCreate": {
-        "type": "object", "additionalProperties": false,
-        "required": ["code", "title", "shortDescription", "detailedDescription", "iconKey"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "title",
+          "shortDescription",
+          "detailedDescription",
+          "iconKey"
+        ],
         "properties": {
-          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 64 },
-          "title": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "shortDescription": { "type": "string", "minLength": 1, "maxLength": 500 },
-          "detailedDescription": { "type": "string", "minLength": 1, "maxLength": 2000 },
-          "iconKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 64 },
-          "displayOrder": { "type": "integer", "minimum": 0, "default": 0 },
-          "isPublic": { "type": "boolean", "default": true },
-          "isActive": { "type": "boolean", "default": true }
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "shortDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "detailedDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "iconKey": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "maxLength": 64
+          },
+          "displayOrder": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "isPublic": {
+            "type": "boolean",
+            "default": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
         }
       },
       "ServiceNeedPatch": {
-        "type": "object", "additionalProperties": false, "minProperties": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
         "properties": {
-          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 64 },
-          "title": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "shortDescription": { "type": "string", "minLength": 1, "maxLength": 500 },
-          "detailedDescription": { "type": "string", "minLength": 1, "maxLength": 2000 },
-          "iconKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 64 },
-          "displayOrder": { "type": "integer", "minimum": 0 }, "isPublic": { "type": "boolean" }, "isActive": { "type": "boolean" }
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "shortDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "detailedDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "iconKey": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "maxLength": 64
+          },
+          "displayOrder": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
         }
       },
       "ServiceNeedLinksReplace": {
-        "type": "object", "additionalProperties": false, "required": ["services"],
-        "properties": { "services": { "type": "array", "maxItems": 100, "items": { "type": "object", "additionalProperties": false, "required": ["serviceId", "weight", "isPrimary"], "properties": { "serviceId": { "type": "string", "format": "uuid" }, "weight": { "type": "integer", "minimum": 1, "maximum": 100 }, "isPrimary": { "type": "boolean" } } } } }
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "services"
+        ],
+        "properties": {
+          "services": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "serviceId",
+                "weight",
+                "isPrimary"
+              ],
+              "properties": {
+                "serviceId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "weight": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "isPrimary": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
       },
       "ServiceCategory": {
         "type": "string",
@@ -3310,6 +4034,11 @@
           },
           "source": {
             "$ref": "#/components/schemas/LeadSource"
+          },
+          "diagnosticId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Accepted only when source is diagnostic."
           }
         }
       },
@@ -4282,6 +5011,195 @@
           "expectedUpdatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "DiagnosticAnswer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "questionId",
+          "optionIds"
+        ],
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "optionIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "DiagnosticEvaluation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ruleSetId",
+          "answers"
+        ],
+        "properties": {
+          "ruleSetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 30,
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticAnswer"
+            }
+          },
+          "initialNeedCode": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "maxLength": 64
+          }
+        }
+      },
+      "DiagnosticPointRule": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "needId",
+          "points"
+        ],
+        "properties": {
+          "needId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "points": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        }
+      },
+      "DiagnosticDraft": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description",
+          "questions"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "questions": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "question",
+                "type",
+                "displayOrder",
+                "required",
+                "isActive",
+                "options"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "maxLength": 64
+                },
+                "question": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "helpText": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 1000
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "single_choice",
+                    "multiple_choice"
+                  ]
+                },
+                "displayOrder": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "options": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 20,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "code",
+                      "label",
+                      "displayOrder",
+                      "points"
+                    ],
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]*$",
+                        "maxLength": 64
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "description": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 1000
+                      },
+                      "displayOrder": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "points": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "items": {
+                          "$ref": "#/components/schemas/DiagnosticPointRule"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

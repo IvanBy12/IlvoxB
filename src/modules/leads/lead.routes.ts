@@ -72,6 +72,14 @@ export const leadRoutes: FastifyPluginCallback<LeadRoutesOptions> = (app, option
     return successResponse(await options.service.get(request.actor, request.params.leadId));
   });
 
+  app.get<{ Params: LeadIdParams }>("/leads/:leadId/diagnostic", {
+    preHandler: app.requireActor,
+    schema: { params: LeadIdParamsSchema },
+  }, async (request) => {
+    if (request.actor === null) throw new Error("Authenticated actor was not constructed");
+    return successResponse(await options.service.getDiagnostic(request.actor, request.params.leadId));
+  });
+
   app.patch<{ Params: LeadIdParams; Body: LeadCommercialPatchBody }>("/leads/:leadId", {
     preHandler: app.requireActor,
     schema: { params: LeadIdParamsSchema, body: LeadCommercialPatchSchema },

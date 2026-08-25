@@ -6,6 +6,7 @@ import type {
   LeadCommercialPatch,
   LeadConversionInput,
   LeadDetail,
+  LeadDiagnosticDetail,
   LeadHistoryEntry,
   LeadListInput,
   LeadRecord,
@@ -138,12 +139,43 @@ export class PostgresLeadRepository implements LeadRepository {
         ],
       );
       const leadId = inserted.rows[0]!.id;
+      if (input.diagnosticId !== undefined) {
+        const diagnostic = await client.query<{
+          readonly lead_id: string | null;
+          readonly expires_at: Date;
+        }>(
+          `SELECT lead_id, expires_at FROM diagnostic_runs WHERE id = $1 FOR UPDATE`,
+          [input.diagnosticId],
+        );
+        const run = diagnostic.rows[0];
+        if (run === undefined) {
+          throw Object.assign(new Error("diagnostic_not_found"), { code: "ILVOX_DIAGNOSTIC_NOT_FOUND" });
+        }
+        if (run.expires_at.getTime() <= Date.now()) {
+          throw Object.assign(new Error("diagnostic_expired"), { code: "ILVOX_DIAGNOSTIC_EXPIRED" });
+        }
+        if (run.lead_id !== null) {
+          throw Object.assign(new Error("diagnostic_claimed"), { code: "ILVOX_DIAGNOSTIC_CLAIMED" });
+        }
+        const claimed = await client.query(
+          "UPDATE diagnostic_runs SET lead_id = $1 WHERE id = $2 AND lead_id IS NULL",
+          [leadId, input.diagnosticId],
+        );
+        if (claimed.rowCount !== 1) {
+          throw Object.assign(new Error("diagnostic_claimed"), { code: "ILVOX_DIAGNOSTIC_CLAIMED" });
+        }
+      }
       await insertAuditEvent(client, {
         ...audit,
         action: "lead.public_created",
         entityType: "lead",
         entityId: leadId,
-        newValues: { source: input.source, serviceId: input.serviceId ?? null, status: "new" },
+        newValues: {
+          source: input.source,
+          serviceId: input.serviceId ?? null,
+          diagnosticId: input.diagnosticId ?? null,
+          status: "new",
+        },
       });
       return (await this.selectOne(client, leadId, { sql: "true", values: [] }))!;
     });
@@ -207,6 +239,31 @@ export class PostgresLeadRepository implements LeadRepository {
       createdAt: row.created_at,
     }));
     return { ...lead, history: entries };
+  }
+
+  async findDiagnosticAuthorized(
+    scope: AuthorizedRepositoryScope,
+    leadId: string,
+  ): Promise<LeadDiagnosticDetail | null> {
+    const scoped = leadScope(scope, 2);
+    const result = await this.pool.query<{
+      readonly id: string;
+      readonly completed_at: Date;
+      readonly expires_at: Date;
+      readonly result_snapshot: LeadDiagnosticDetail["resultSnapshot"];
+    }>(
+      `SELECT d.id, d.completed_at, d.expires_at, d.result_snapshot
+       FROM diagnostic_runs d JOIN leads l ON l.id = d.lead_id
+       WHERE l.id = $1 AND ${scoped.sql}`,
+      [leadId, ...scoped.values],
+    );
+    const row = result.rows[0];
+    return row === undefined ? null : {
+      id: row.id,
+      completedAt: row.completed_at,
+      expiresAt: row.expires_at,
+      resultSnapshot: row.result_snapshot,
+    };
   }
 
   updateCommercial(

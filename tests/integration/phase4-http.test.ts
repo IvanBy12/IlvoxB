@@ -243,6 +243,31 @@ describe("Phase 4 HTTP routes", () => {
     expect(response.json()).toMatchObject({ error: { code: "NOT_FOUND" } });
   });
 
+  it.each([
+    ["ILVOX_DIAGNOSTIC_NOT_FOUND", 404],
+    ["ILVOX_DIAGNOSTIC_EXPIRED", 409],
+    ["ILVOX_DIAGNOSTIC_CLAIMED", 409],
+  ])("maps diagnostic association failure %s", async (code, statusCode) => {
+    const createPublic = vi.fn(() => Promise.reject(Object.assign(new Error(code), { code })));
+    app = await buildTestApp({}, dependencies(createPublic));
+    const response = await app.inject({ method: "POST", url: "/api/v1/leads", payload: {
+      fullName: "Person", email: "person@example.test", message: "Message", source: "diagnostic",
+      diagnosticId: "00000000-0000-4000-8000-000000008c99",
+    } });
+    expect(response.statusCode).toBe(statusCode);
+  });
+
+  it("accepts diagnosticId only for diagnostic source", async () => {
+    const createPublic = vi.fn(() => Promise.resolve(leadRecord));
+    app = await buildTestApp({}, dependencies(createPublic));
+    const response = await app.inject({ method: "POST", url: "/api/v1/leads", payload: {
+      fullName: "Person", email: "person@example.test", message: "Message", source: "contact",
+      diagnosticId: "00000000-0000-4000-8000-000000008c99",
+    } });
+    expect(response.statusCode).toBe(400);
+    expect(createPublic).not.toHaveBeenCalled();
+  });
+
   it("enforces the public lead rate limit and exposes Retry-After", async () => {
     app = await buildTestApp({}, dependencies(() => Promise.resolve(leadRecord)));
     const responses = [];
@@ -305,6 +330,22 @@ describe("Phase 4 HTTP routes", () => {
     const response = await app.inject({ method: "GET", url: "/api/v1/leads" });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ data: { items: [{ id: LEAD_ID }] } });
+  });
+
+  it("returns the stored diagnostic snapshot only through the lead read scope", async () => {
+    const deps = dependencies(() => Promise.resolve(leadRecord));
+    deps.leadRepository.findDiagnosticAuthorized = vi.fn(() => Promise.resolve({
+      id: "00000000-0000-4000-8000-000000008c99", completedAt: now, expiresAt: new Date(now.getTime() + 1_000),
+      resultSnapshot: {
+        engineVersion: 1, ruleSetId: "00000000-0000-4000-8000-000000008c00", ruleSetTitle: "Motor", completedAt: now.toISOString(), answers: [],
+        primaryNeed: null, secondaryNeeds: [], primaryService: null, complementaryServices: [], reasons: [], summary: "Snapshot", disclaimer: "Orientativo",
+      },
+    }));
+    app = await buildTestApp({}, { ...deps, authenticationProvider: authenticated, identityRepository: identityRepository([{ code: "leads.read", scopes: ["global"] }]) });
+    expect((await app.inject({ method: "GET", url: `/api/v1/leads/${LEAD_ID}/diagnostic` })).json()).toMatchObject({ data: { resultSnapshot: { summary: "Snapshot" } } });
+    await app.close(); app = undefined;
+    app = await buildTestApp({}, { ...deps, authenticationProvider: authenticated, identityRepository: identityRepository([]) });
+    expect((await app.inject({ method: "GET", url: `/api/v1/leads/${LEAD_ID}/diagnostic` })).statusCode).toBe(403);
   });
 
   for (const roleCode of ["super_admin", "admin"] as const) {

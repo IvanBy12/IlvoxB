@@ -2,6 +2,7 @@ import type { AuditContext } from "../../common/audit/audit.js";
 import type { AuthorizedRepositoryScope } from "../../common/auth/authorization.types.js";
 import type { PaginatedResult, PaginationInput } from "../../common/http/pagination.js";
 import type { LeadStatus } from "../../common/state-machines/lead-transitions.js";
+import type { DiagnosticResultSnapshot } from "../diagnostic/diagnostic.types.js";
 
 export const LEAD_SOURCES = ["diagnostic", "quotation", "contact", "referral", "campaign"] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
@@ -45,6 +46,14 @@ export interface PublicLeadInput {
   readonly serviceId?: string;
   readonly message: string;
   readonly source: LeadSource;
+  readonly diagnosticId?: string;
+}
+
+export interface LeadDiagnosticDetail {
+  readonly id: string;
+  readonly completedAt: Date;
+  readonly expiresAt: Date;
+  readonly resultSnapshot: DiagnosticResultSnapshot;
 }
 
 export interface LeadListInput extends PaginationInput {
@@ -110,6 +119,7 @@ export interface LeadRepository {
     input: LeadListInput,
   ): Promise<PaginatedResult<LeadRecord>>;
   findAuthorized(scope: AuthorizedRepositoryScope, leadId: string): Promise<LeadDetail | null>;
+  findDiagnosticAuthorized?(scope: AuthorizedRepositoryScope, leadId: string): Promise<LeadDiagnosticDetail | null>;
   updateCommercial(
     scope: AuthorizedRepositoryScope,
     leadId: string,

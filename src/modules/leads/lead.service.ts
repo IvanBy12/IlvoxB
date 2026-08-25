@@ -19,6 +19,13 @@ export class LeadService {
   ) {}
 
   async createPublic(input: PublicLeadInput, audit: AuditContext) {
+    if (input.diagnosticId !== undefined && input.source !== "diagnostic") {
+      throw new AppError({
+        code: ErrorCode.ValidationError,
+        message: "diagnosticId is only accepted for diagnostic leads",
+        statusCode: 400,
+      });
+    }
     try {
       return await this.repository.createPublic({
         ...input,
@@ -32,6 +39,15 @@ export class LeadService {
       if ((error as { readonly code?: string }).code === "ILVOX_SERVICE_NOT_FOUND") {
         throw this.notFound("Service");
       }
+      if ((error as { readonly code?: string }).code === "ILVOX_DIAGNOSTIC_NOT_FOUND") {
+        throw this.notFound("Diagnostic");
+      }
+      if ((error as { readonly code?: string }).code === "ILVOX_DIAGNOSTIC_EXPIRED") {
+        throw new AppError({ code: ErrorCode.Conflict, message: "Diagnostic has expired", statusCode: 409 });
+      }
+      if ((error as { readonly code?: string }).code === "ILVOX_DIAGNOSTIC_CLAIMED") {
+        throw new AppError({ code: ErrorCode.Conflict, message: "Diagnostic is already linked to a lead", statusCode: 409 });
+      }
       throw error;
     }
   }
@@ -44,6 +60,15 @@ export class LeadService {
     const lead = await this.repository.findAuthorized(this.leadScope(actor, "leads.read", leadId), leadId);
     if (lead === null) throw this.notFound("Lead");
     return lead;
+  }
+
+  async getDiagnostic(actor: ActorContext, leadId: string) {
+    const diagnostic = await this.repository.findDiagnosticAuthorized?.(
+      this.leadScope(actor, "leads.read", leadId),
+      leadId,
+    ) ?? null;
+    if (diagnostic === null) throw this.notFound("Lead diagnostic");
+    return diagnostic;
   }
 
   async updateCommercial(

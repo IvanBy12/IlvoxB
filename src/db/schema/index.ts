@@ -1,4 +1,5 @@
 export * from "./audit.js";
+export * from "./diagnostics.js";
 export * from "./files.js";
 export * from "./identity.js";
 export * from "./invitations.js";
@@ -12,6 +13,7 @@ export * from "./tasks.js";
 export * from "./tickets.js";
 
 import { auditEvents } from "./audit.js";
+import { diagnosticOptionNeedPoints, diagnosticOptions, diagnosticQuestions, diagnosticRuleSets, diagnosticRuns } from "./diagnostics.js";
 import { files } from "./files.js";
 import { appUsers, identityWebhookEvents } from "./identity.js";
 import { organizationInvitations } from "./invitations.js";
@@ -37,7 +39,12 @@ export const schemaTables = [
   services,
   serviceNeeds,
   serviceNeedLinks,
+  diagnosticRuleSets,
+  diagnosticQuestions,
+  diagnosticOptions,
+  diagnosticOptionNeedPoints,
   leads,
+  diagnosticRuns,
   projects,
   projectMembers,
   projectMilestones,

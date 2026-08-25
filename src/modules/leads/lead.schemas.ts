@@ -19,6 +19,7 @@ export const PublicLeadBodySchema = Type.Object({
   serviceId: Type.Optional(Type.String({ format: "uuid" })),
   message: Type.String({ minLength: 1, maxLength: 5000 }),
   source: LeadSourceSchema,
+  diagnosticId: Type.Optional(Type.String({ format: "uuid" })),
   status: Type.Optional(Type.Never()),
   assignedToUserId: Type.Optional(Type.Never()),
   convertedOrganizationId: Type.Optional(Type.Never()),

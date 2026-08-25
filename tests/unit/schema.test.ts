@@ -6,6 +6,11 @@ const EXPECTED_TABLES = [
   "app_users",
   "audit_events",
   "deliverables",
+  "diagnostic_option_need_points",
+  "diagnostic_options",
+  "diagnostic_questions",
+  "diagnostic_rule_sets",
+  "diagnostic_runs",
   "files",
   "identity_webhook_events",
   "leads",
@@ -32,6 +37,6 @@ describe("database schema", () => {
     const actualTables = schemaTables.map((table) => getTableName(table)).toSorted();
 
     expect(actualTables).toEqual([...EXPECTED_TABLES]);
-    expect(new Set(actualTables).size).toBe(22);
+    expect(new Set(actualTables).size).toBe(27);
   });
 });

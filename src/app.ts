@@ -55,6 +55,10 @@ import { PostgresClientInvitationRepository } from "./modules/client-invitations
 import { OfficialClerkInvitationGateway } from "./modules/client-invitations/client-invitation.clerk.js";
 import { ClientInvitationService } from "./modules/client-invitations/client-invitation.service.js";
 import { clientInvitationRoutes } from "./modules/client-invitations/client-invitation.routes.js";
+import type { DiagnosticRepository } from "./modules/diagnostic/diagnostic.types.js";
+import { PostgresDiagnosticRepository } from "./modules/diagnostic/diagnostic.repository.js";
+import { DiagnosticService } from "./modules/diagnostic/diagnostic.service.js";
+import { diagnosticRoutes } from "./modules/diagnostic/diagnostic.routes.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -72,6 +76,7 @@ export interface BuildAppOptions {
   readonly ticketRepository?: TicketRepository;
   readonly clientInvitationRepository?: ClientInvitationRepository;
   readonly clerkInvitationGateway?: ClerkInvitationGateway;
+  readonly diagnosticRepository?: DiagnosticRepository;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -165,6 +170,15 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(serviceNeedRoutes, {
       prefix: "/api/v1",
       service: new ServiceNeedService(serviceNeedRepository, new AuthorizationService()),
+    });
+  }
+
+  const hasDiagnosticDependencies = app.databasePool !== null || options.diagnosticRepository !== undefined;
+  if (hasDiagnosticDependencies) {
+    const diagnosticRepository = options.diagnosticRepository ?? new PostgresDiagnosticRepository(app.databasePool!);
+    await app.register(diagnosticRoutes, {
+      prefix: "/api/v1",
+      service: new DiagnosticService(diagnosticRepository, new AuthorizationService()),
     });
   }
 
