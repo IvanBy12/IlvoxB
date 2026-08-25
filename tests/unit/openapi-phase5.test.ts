@@ -52,18 +52,29 @@ const phase8aOperations = [
   "POST /organizations/{organizationId}/invitations/{invitationId}/revoke",
   "POST /client-invitations/claim",
 ] as const;
+const phase8bOperations = [
+  "GET /service-needs",
+  "GET /service-needs/{needId}",
+  "GET /service-needs/{needId}/services",
+  "GET /admin/service-needs",
+  "POST /admin/service-needs",
+  "GET /admin/service-needs/{needId}",
+  "PATCH /admin/service-needs/{needId}",
+  "PUT /admin/service-needs/{needId}/services",
+] as const;
 
-describe("Accumulated OpenAPI through Phase 8A", () => {
-  it("retains Phase 5/6 and adds exactly the five invitation operations", () => {
+describe("Accumulated OpenAPI through Phase 8B", () => {
+  it("retains prior phases and adds exactly the eight service-needs operations", () => {
     const operations = Object.entries(document.paths).flatMap(([path, item]) =>
       Object.keys(item)
         .filter((method) => methods.has(method))
         .map((method) => `${method.toUpperCase()} ${path}`));
-    expect(document.info.version).toBe("0.8.0");
-    expect(operations).toHaveLength(60);
+    expect(document.info.version).toBe("0.8.1");
+    expect(operations).toHaveLength(68);
     expect(phase5Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase6Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase8aOperations.every((operation) => operations.includes(operation))).toBe(true);
+    expect(phase8bOperations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase5Operations).toHaveLength(24);
   });
 

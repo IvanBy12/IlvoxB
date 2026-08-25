@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ILVOX Backend API",
-    "version": "0.8.0",
-    "description": "Contrato acumulado hasta Fase 8A, incluidas invitaciones privadas de clientes con Clerk y autorización final en PostgreSQL. No incluye Personal, 8B, 8C, archivos, notificaciones ni RBAC administrativo."
+    "version": "0.8.1",
+    "description": "Contrato acumulado hasta Fase 8B, incluida la taxonomía pública y la administración de necesidades vinculadas a servicios. No incluye Personal, 8C, diagnóstico persistente, archivos, notificaciones ni RBAC administrativo."
   },
   "servers": [
     {
@@ -13,6 +13,9 @@
   "tags": [
     {
       "name": "Services"
+    },
+    {
+      "name": "Service Needs"
     },
     {
       "name": "Leads"
@@ -293,6 +296,57 @@
             "$ref": "#/components/responses/Conflict"
           }
         }
+      }
+    },
+    "/service-needs": {
+      "get": {
+        "tags": ["Service Needs"], "summary": "List public active service needs", "security": [], "x-permission": "public", "x-scope": "is_public=true AND is_active=true", "x-rate-limit": "60 per minute",
+        "parameters": [{ "$ref": "#/components/parameters/Page" }, { "$ref": "#/components/parameters/PageSize" }, { "$ref": "#/components/parameters/Search" }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/ValidationError" }, "429": { "$ref": "#/components/responses/RateLimited" } }
+      }
+    },
+    "/service-needs/{needId}": {
+      "get": {
+        "tags": ["Service Needs"], "summary": "Get a public active service need", "security": [], "x-permission": "public", "x-rate-limit": "60 per minute",
+        "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/NotFound" }, "429": { "$ref": "#/components/responses/RateLimited" } }
+      }
+    },
+    "/service-needs/{needId}/services": {
+      "get": {
+        "tags": ["Service Needs"], "summary": "List related public active services ordered by primary and weight", "security": [], "x-permission": "public", "x-rate-limit": "60 per minute",
+        "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/NotFound" }, "429": { "$ref": "#/components/responses/RateLimited" } }
+      }
+    },
+    "/admin/service-needs": {
+      "get": {
+        "tags": ["Service Needs"], "summary": "List service needs for internal administration", "security": [{ "clerkSession": [] }], "x-permission": "services.read", "x-scope": "global",
+        "parameters": [{ "$ref": "#/components/parameters/Page" }, { "$ref": "#/components/parameters/PageSize" }, { "$ref": "#/components/parameters/Search" }, { "name": "isPublic", "in": "query", "schema": { "type": "boolean" } }, { "name": "isActive", "in": "query", "schema": { "type": "boolean" } }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      },
+      "post": {
+        "tags": ["Service Needs"], "summary": "Create a service need", "security": [{ "clerkSession": [] }], "x-permission": "services.manage", "x-scope": "global internal actor",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceNeedCreate" } } } },
+        "responses": { "201": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/ValidationError" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/admin/service-needs/{needId}": {
+      "get": {
+        "tags": ["Service Needs"], "summary": "Get a service need and all relationships", "security": [{ "clerkSession": [] }], "x-permission": "services.read", "x-scope": "global", "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "patch": {
+        "tags": ["Service Needs"], "summary": "Update, order, publish, hide, activate, or deactivate a service need", "security": [{ "clerkSession": [] }], "x-permission": "services.manage", "x-scope": "global internal actor", "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceNeedPatch" } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/ValidationError" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/admin/service-needs/{needId}/services": {
+      "put": {
+        "tags": ["Service Needs"], "summary": "Transactionally replace service relationships", "security": [{ "clerkSession": [] }], "x-permission": "services.manage", "x-scope": "global internal actor", "parameters": [{ "name": "needId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceNeedLinksReplace" } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/ValidationError" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
       }
     },
     "/leads": {
@@ -3077,6 +3131,35 @@
       }
     },
     "schemas": {
+      "ServiceNeedCreate": {
+        "type": "object", "additionalProperties": false,
+        "required": ["code", "title", "shortDescription", "detailedDescription", "iconKey"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 64 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "shortDescription": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "detailedDescription": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "iconKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 64 },
+          "displayOrder": { "type": "integer", "minimum": 0, "default": 0 },
+          "isPublic": { "type": "boolean", "default": true },
+          "isActive": { "type": "boolean", "default": true }
+        }
+      },
+      "ServiceNeedPatch": {
+        "type": "object", "additionalProperties": false, "minProperties": 1,
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 64 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "shortDescription": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "detailedDescription": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "iconKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 64 },
+          "displayOrder": { "type": "integer", "minimum": 0 }, "isPublic": { "type": "boolean" }, "isActive": { "type": "boolean" }
+        }
+      },
+      "ServiceNeedLinksReplace": {
+        "type": "object", "additionalProperties": false, "required": ["services"],
+        "properties": { "services": { "type": "array", "maxItems": 100, "items": { "type": "object", "additionalProperties": false, "required": ["serviceId", "weight", "isPrimary"], "properties": { "serviceId": { "type": "string", "format": "uuid" }, "weight": { "type": "integer", "minimum": 1, "maximum": 100 }, "isPrimary": { "type": "boolean" } } } } }
+      },
       "ServiceCategory": {
         "type": "string",
         "enum": [

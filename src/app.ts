@@ -23,6 +23,10 @@ import type { ServiceCatalogRepository } from "./modules/services/service-catalo
 import { PostgresServiceCatalogRepository } from "./modules/services/service-catalog.repository.js";
 import { ServiceCatalogService } from "./modules/services/service-catalog.service.js";
 import { serviceCatalogRoutes } from "./modules/services/service-catalog.routes.js";
+import type { ServiceNeedRepository } from "./modules/service-needs/service-needs.types.js";
+import { PostgresServiceNeedRepository } from "./modules/service-needs/service-needs.repository.js";
+import { ServiceNeedService } from "./modules/service-needs/service-needs.service.js";
+import { serviceNeedRoutes } from "./modules/service-needs/service-needs.routes.js";
 import type { LeadRepository } from "./modules/leads/lead.types.js";
 import { PostgresLeadRepository } from "./modules/leads/lead.repository.js";
 import { LeadService } from "./modules/leads/lead.service.js";
@@ -60,6 +64,7 @@ export interface BuildAppOptions {
   readonly webhookVerifier?: ClerkWebhookVerifier;
   readonly webhookProcessor?: ClerkWebhookProcessor;
   readonly serviceCatalogRepository?: ServiceCatalogRepository;
+  readonly serviceNeedRepository?: ServiceNeedRepository;
   readonly leadRepository?: LeadRepository;
   readonly organizationRepository?: OrganizationRepository;
   readonly projectRepository?: ProjectRepository;
@@ -151,6 +156,15 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(organizationRoutes, {
       prefix: "/api/v1",
       service: new OrganizationService(organizationRepository, authorization),
+    });
+  }
+
+  const hasServiceNeedDependencies = app.databasePool !== null || options.serviceNeedRepository !== undefined;
+  if (hasServiceNeedDependencies) {
+    const serviceNeedRepository = options.serviceNeedRepository ?? new PostgresServiceNeedRepository(app.databasePool!);
+    await app.register(serviceNeedRoutes, {
+      prefix: "/api/v1",
+      service: new ServiceNeedService(serviceNeedRepository, new AuthorizationService()),
     });
   }
 

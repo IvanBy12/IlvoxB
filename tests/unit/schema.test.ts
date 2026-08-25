@@ -18,6 +18,8 @@ const EXPECTED_TABLES = [
   "projects",
   "role_permissions",
   "roles",
+  "service_need_links",
+  "service_needs",
   "services",
   "tasks",
   "ticket_comments",
@@ -30,6 +32,6 @@ describe("database schema", () => {
     const actualTables = schemaTables.map((table) => getTableName(table)).toSorted();
 
     expect(actualTables).toEqual([...EXPECTED_TABLES]);
-    expect(new Set(actualTables).size).toBe(20);
+    expect(new Set(actualTables).size).toBe(22);
   });
 });
