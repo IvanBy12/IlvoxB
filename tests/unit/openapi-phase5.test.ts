@@ -71,19 +71,20 @@ const phase8cOperations = [
   "POST /admin/diagnostic/publish",
 ] as const;
 
-describe("Accumulated OpenAPI through Phase 8C", () => {
-  it("retains prior phases and adds the diagnostic operations", () => {
+describe("Accumulated OpenAPI through Phase 8D.1", () => {
+  it("retains prior phases and adds the user-catalog operations", () => {
     const operations = Object.entries(document.paths).flatMap(([path, item]) =>
       Object.keys(item)
         .filter((method) => methods.has(method))
         .map((method) => `${method.toUpperCase()} ${path}`));
-    expect(document.info.version).toBe("0.8.2");
-    expect(operations).toHaveLength(74);
+    expect(document.info.version).toBe("0.8.3");
+    expect(operations).toHaveLength(77);
     expect(phase5Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase6Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase8aOperations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase8bOperations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase8cOperations.every((operation) => operations.includes(operation))).toBe(true);
+    expect(["GET /users", "GET /users/{userId}", "GET /users/eligible"].every((operation) => operations.includes(operation))).toBe(true);
     expect(phase5Operations).toHaveLength(24);
   });
 

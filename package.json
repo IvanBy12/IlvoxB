@@ -49,7 +49,9 @@
     "audit:constraint-names": "node scripts/audit-constraint-names.mjs",
     "openapi:phase5": "node scripts/generate-phase5-openapi.mjs",
     "openapi:phase6": "node scripts/generate-phase6-openapi.mjs",
-    "openapi:phase8c": "node scripts/generate-phase8c-openapi.mjs"
+    "openapi:phase8c": "node scripts/generate-phase8c-openapi.mjs",
+    "openapi:phase8d1": "node scripts/generate-phase8d1-openapi.mjs",
+    "smoke:phase8d1:user-catalog": "tsx scripts/smoke-phase8d1-user-catalog.ts"
   },
   "dependencies": {
     "@clerk/backend": "^3.12.0",

@@ -59,6 +59,10 @@ import type { DiagnosticRepository } from "./modules/diagnostic/diagnostic.types
 import { PostgresDiagnosticRepository } from "./modules/diagnostic/diagnostic.repository.js";
 import { DiagnosticService } from "./modules/diagnostic/diagnostic.service.js";
 import { diagnosticRoutes } from "./modules/diagnostic/diagnostic.routes.js";
+import type { UserCatalogRepository } from "./modules/users/user-catalog.types.js";
+import { PostgresUserCatalogRepository } from "./modules/users/user-catalog.repository.js";
+import { UserCatalogService } from "./modules/users/user-catalog.service.js";
+import { userCatalogRoutes } from "./modules/users/user-catalog.routes.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -77,6 +81,7 @@ export interface BuildAppOptions {
   readonly clientInvitationRepository?: ClientInvitationRepository;
   readonly clerkInvitationGateway?: ClerkInvitationGateway;
   readonly diagnosticRepository?: DiagnosticRepository;
+  readonly userCatalogRepository?: UserCatalogRepository;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -123,6 +128,16 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(authContextPlugin, { identityService });
   await app.register(healthRoutes, { healthService });
   await app.register(identityRoutes, { identityService });
+
+  const hasUserCatalogDependencies = app.databasePool !== null || options.userCatalogRepository !== undefined;
+  if (hasUserCatalogDependencies) {
+    const userCatalogRepository = options.userCatalogRepository ??
+      new PostgresUserCatalogRepository(app.databasePool!);
+    await app.register(userCatalogRoutes, {
+      prefix: "/api/v1",
+      service: new UserCatalogService(userCatalogRepository, new AuthorizationService()),
+    });
+  }
 
   const shouldRegisterWebhook = config.CLERK_WEBHOOKS_ENABLED ||
     (options.webhookVerifier !== undefined && options.webhookProcessor !== undefined);

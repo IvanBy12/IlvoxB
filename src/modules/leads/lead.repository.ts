@@ -361,6 +361,8 @@ export class PostgresLeadRepository implements LeadRepository {
            AND EXISTS (
              SELECT 1 FROM user_roles ur
              JOIN roles r ON r.id = ur.role_id AND r.scope = 'global'
+             JOIN role_permissions rp ON rp.role_id = r.id
+             JOIN permissions p ON p.id = rp.permission_id AND p.code = 'leads.manage'
              WHERE ur.user_id = u.id
            )`,
         [assignedToUserId],
@@ -514,6 +516,8 @@ export class PostgresLeadRepository implements LeadRepository {
                AND EXISTS (
                  SELECT 1 FROM user_roles ur
                  JOIN roles r ON r.id = ur.role_id AND r.scope = 'global'
+                 JOIN role_permissions rp ON rp.role_id = r.id
+                 JOIN permissions p ON p.id = rp.permission_id AND p.code = 'organizations.manage'
                  WHERE ur.user_id = u.id
                )`,
             [accountManagerUserId],

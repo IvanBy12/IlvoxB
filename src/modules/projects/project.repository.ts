@@ -843,6 +843,8 @@ export class PostgresProjectRepository implements ProjectRepository {
        WHERE u.id = $1 AND u.status = 'active'
          AND EXISTS (
            SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+           JOIN role_permissions rp ON rp.role_id = r.id
+           JOIN permissions p ON p.id = rp.permission_id AND p.code = 'projects.manage'
            WHERE ur.user_id = u.id AND r.scope = 'global'
          )`,
       [userId],
@@ -861,6 +863,8 @@ export class PostgresProjectRepository implements ProjectRepository {
          AND (
            EXISTS (
              SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+             JOIN role_permissions rp ON rp.role_id = r.id
+             JOIN permissions p ON p.id = rp.permission_id AND p.code = 'projects.read'
              WHERE ur.user_id = u.id AND r.scope = 'global'
            )
            OR EXISTS (

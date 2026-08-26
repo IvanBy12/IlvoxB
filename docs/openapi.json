@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ILVOX Backend API",
-    "version": "0.8.2",
-    "description": "Fase 8C: simulador diagnóstico determinista y versionado. Las respuestas puntúan necesidades y las necesidades puntúan servicios mediante las relaciones públicas/activas de 8B. Sin IA."
+    "version": "0.8.3",
+    "description": "Fase 8D.1: catálogo administrativo de usuarios y elegibilidad contextual calculada exclusivamente por PostgreSQL/RBAC."
   },
   "servers": [
     {
@@ -52,6 +52,9 @@
     },
     {
       "name": "Diagnostic"
+    },
+    {
+      "name": "Users"
     }
   ],
   "paths": {
@@ -3633,6 +3636,269 @@
           }
         }
       }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List the administrative local user catalog",
+        "description": "Returns local authorization data only. No Clerk identifiers or metadata are exposed. lastAccessAt is null until an existing access tracker is available.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "users.manage",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 320
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "active",
+                "blocked",
+                "deleted"
+              ]
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "internal",
+                "client"
+              ]
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "displayName",
+                "email",
+                "createdAt"
+              ]
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get one local user catalog record",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "users.manage",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/users/eligible": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List eligible users for an operational purpose",
+        "description": "The server validates the purpose/context combination, resource scope, active status, internal/client boundary, memberships and effective RBAC. Ineligible identities are omitted.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "Purpose-specific: organizations.manage, projects.manage, tasks.manage, tickets.assign, or leads.manage",
+        "x-neutral-scope": "Out-of-scope organization, project, task, ticket, and lead contexts return 404",
+        "parameters": [
+          {
+            "name": "purpose",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EligibleUserPurpose"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "ticketId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "taskId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "leadId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 320
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5199,6 +5465,98 @@
                   }
                 }
               }
+            }
+          }
+        }
+      },
+      "EligibleUserPurpose": {
+        "type": "string",
+        "enum": [
+          "organization_account_manager",
+          "project_lead",
+          "project_member",
+          "task_assignee",
+          "ticket_assignee",
+          "lead_assignee"
+        ]
+      },
+      "UserCatalogItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "displayName",
+          "email",
+          "status",
+          "isInternal",
+          "roles",
+          "createdAt",
+          "lastAccessAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "blocked",
+              "deleted"
+            ]
+          },
+          "isInternal": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastAccessAt": {
+            "type": "null"
+          }
+        }
+      },
+      "EligibleUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "displayName",
+          "email",
+          "roles"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         }

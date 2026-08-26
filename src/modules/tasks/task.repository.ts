@@ -392,9 +392,20 @@ export class PostgresTaskRepository implements TaskRepository {
     userId: string,
   ): Promise<boolean> {
     const result = await client.query(
-      `SELECT 1 FROM project_members pm
-       JOIN app_users u ON u.id = pm.user_id AND u.status = 'active'
-       WHERE pm.project_id = $1 AND pm.user_id = $2 AND pm.status = 'active'`,
+      `SELECT 1 FROM app_users u
+       WHERE u.id = $2 AND u.status = 'active' AND (
+         EXISTS (
+           SELECT 1 FROM project_members pm
+           WHERE pm.project_id = $1 AND pm.user_id = u.id AND pm.status = 'active'
+         )
+         OR EXISTS (SELECT 1 FROM projects p WHERE p.id = $1 AND p.lead_user_id = u.id)
+         OR EXISTS (
+           SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id AND r.scope = 'global'
+           JOIN role_permissions rp ON rp.role_id = r.id
+           JOIN permissions p ON p.id = rp.permission_id AND p.code = 'tasks.manage'
+           WHERE ur.user_id = u.id
+         )
+       )`,
       [projectId, userId],
     );
     return result.rowCount !== 0;
@@ -406,6 +417,8 @@ export class PostgresTaskRepository implements TaskRepository {
        WHERE u.id = $1 AND u.status = 'active'
          AND EXISTS (
            SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+           JOIN role_permissions rp ON rp.role_id = r.id
+           JOIN permissions p ON p.id = rp.permission_id AND p.code = 'tasks.manage'
            WHERE ur.user_id = u.id AND r.scope = 'global'
          )`,
       [userId],

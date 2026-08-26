@@ -424,10 +424,24 @@ export class PostgresTicketRepository implements TicketRepository {
           `SELECT 1 FROM app_users u
            WHERE u.id = $1 AND u.status = 'active'
              AND EXISTS (
-               SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-               WHERE ur.user_id = u.id AND r.scope = 'global'
+               SELECT 1 FROM user_roles internal_ur JOIN roles internal_r ON internal_r.id = internal_ur.role_id
+               WHERE internal_ur.user_id = u.id AND internal_r.scope = 'global'
+             )
+             AND (
+               EXISTS (
+                 SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+                 JOIN role_permissions rp ON rp.role_id = r.id
+                 JOIN permissions p ON p.id = rp.permission_id AND p.code = 'tickets.assign'
+                 WHERE ur.user_id = u.id AND r.scope = 'global'
+               )
+               OR ($2::uuid IS NOT NULL AND EXISTS (
+                 SELECT 1 FROM project_members pm
+                 JOIN role_permissions rp ON rp.role_id = pm.role_id
+                 JOIN permissions p ON p.id = rp.permission_id AND p.code = 'tickets.assign'
+                 WHERE pm.project_id = $2 AND pm.user_id = u.id AND pm.status = 'active'
+               ))
              )`,
-          [assignedToUserId],
+          [assignedToUserId, current.projectId],
         );
         if (eligible.rowCount !== 1) return "ineligible_user";
       }
