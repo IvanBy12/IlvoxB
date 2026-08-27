@@ -69,8 +69,11 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 5 PostgreSQL behavior", ()
     );
     await pool.query(
       `INSERT INTO user_roles (user_id, role_id, role_scope)
-       SELECT $1,id,'global' FROM roles WHERE scope='global' AND code='contributor'`,
-      [USER_SECOND],
+       SELECT users.user_id,id,'global'
+       FROM (VALUES ($1::uuid), ($2::uuid)) users(user_id)
+       CROSS JOIN roles
+       WHERE scope='global' AND code='contributor'`,
+      [USER_MEMBER, USER_SECOND],
     );
     await pool.query(
       `INSERT INTO organizations (id,name,status) VALUES

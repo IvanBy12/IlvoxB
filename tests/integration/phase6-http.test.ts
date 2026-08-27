@@ -13,6 +13,7 @@ const ticket = {
   organizationId: null,
   projectId: null,
   requesterUserId: USER_A,
+  requester: { id: USER_A, firstName: "Phase", lastName: "Six", displayName: "Phase Six" },
   assignedToUserId: null,
   code: "TCK-2026-000001",
   type: "incident" as const,
@@ -32,6 +33,7 @@ const comment = {
   ticketId: TICKET_ID,
   organizationId: null,
   authorUserId: USER_A,
+  author: { id: USER_A, firstName: "Phase", lastName: "Six", displayName: "Phase Six" },
   visibility: "client" as const,
   content: "More details",
   createdAt: now,
@@ -155,6 +157,26 @@ describe("Phase 6 ticket HTTP contracts", () => {
         sortDirection: "asc",
       }),
     );
+  });
+
+  it("returns human-readable requester and comment author profiles without Clerk ids", async () => {
+    app = await buildTestApp({}, {
+      authenticationProvider: authenticated,
+      identityRepository: identity(),
+      ticketRepository: repository(),
+    });
+    const detail = await app.inject({ method: "GET", url: `/api/v1/tickets/${TICKET_ID}` });
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json()).toMatchObject({
+      data: { requester: { id: USER_A, firstName: "Phase", lastName: "Six", displayName: "Phase Six" } },
+    });
+    expect(detail.body).not.toContain("clerkUserId");
+    const comments = await app.inject({ method: "GET", url: `/api/v1/tickets/${TICKET_ID}/comments` });
+    expect(comments.statusCode).toBe(200);
+    expect(comments.json()).toMatchObject({
+      data: [{ author: { id: USER_A, firstName: "Phase", lastName: "Six", displayName: "Phase Six" } }],
+    });
+    expect(comments.body).not.toContain("clerkUserId");
   });
 
   it("enforces protected PATCH fields and explicit assignment/priority operations", async () => {

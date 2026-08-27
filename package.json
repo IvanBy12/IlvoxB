@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:webhooks": "clerk webhooks listen --forward-to http://127.0.0.1:3001/webhooks/clerk",
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",

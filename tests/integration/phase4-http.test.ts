@@ -10,6 +10,8 @@ import { buildTestApp } from "../helpers/build-test-app.js";
 
 const SERVICE_ID = "00000000-0000-4000-8000-000000000401";
 const LEAD_ID = "00000000-0000-4000-8000-000000000501";
+const ORGANIZATION_ID = "00000000-0000-4000-8000-000000000601";
+const MEMBER_ID = "00000000-0000-4000-8000-000000000602";
 const now = new Date("2026-07-23T12:00:00.000Z");
 const catalogItem = {
   id: SERVICE_ID,
@@ -141,6 +143,68 @@ describe("Phase 4 HTTP routes", () => {
     const response = await app.inject({ method: "GET", url: "/api/v1/services" });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ data: { items: [{ id: SERVICE_ID, isActive: true }] } });
+  });
+
+  it("allows a CORS-preflighted membership PATCH and forwards every editable field", async () => {
+    const deps = dependencies(() => Promise.resolve(leadRecord));
+    const updatedMember = {
+      organizationId: ORGANIZATION_ID,
+      userId: MEMBER_ID,
+      primaryEmail: "client@example.test",
+      displayName: "Client User",
+      roleCode: "client_manager" as const,
+      status: "active" as const,
+      jobTitle: "Gerente de operaciones",
+      phone: "+57 300 000 0000",
+      activatedAt: now,
+      revokedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const updateMember = vi.fn<OrganizationRepository["updateMember"]>(() => Promise.resolve(updatedMember));
+    const organizations: OrganizationRepository = { ...deps.organizationRepository, updateMember };
+    app = await buildTestApp({}, {
+      ...deps,
+      organizationRepository: organizations,
+      authenticationProvider: authenticated,
+      identityRepository: identityRepository([
+        { code: "organization_members.manage", scopes: ["global"] },
+        { code: "organizations.access_all", scopes: ["global"] },
+      ], { roleCode: "super_admin" }),
+    });
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/organizations/${ORGANIZATION_ID}/members/${MEMBER_ID}`,
+      headers: { origin: "http://127.0.0.1:5173" },
+      payload: {
+        roleCode: "client_manager",
+        status: "active",
+        jobTitle: "Gerente de operaciones",
+        phone: "+57 300 000 0000",
+      },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://127.0.0.1:5173");
+    expect(response.json()).toMatchObject({
+      data: {
+        ...updatedMember,
+        activatedAt: now.toISOString(),
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      },
+    });
+    expect(updateMember).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "global" }),
+      ORGANIZATION_ID,
+      MEMBER_ID,
+      {
+        roleCode: "client_manager",
+        status: "active",
+        jobTitle: "Gerente de operaciones",
+        phone: "+57 300 000 0000",
+      },
+      expect.any(Object),
+    );
   });
 
   it("passes public service pagination and category filters to the repository", async () => {

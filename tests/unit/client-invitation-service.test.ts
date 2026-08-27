@@ -6,6 +6,7 @@ import type {
   ClientInvitation,
   ClientInvitationRepository,
   ClerkInvitationGateway,
+  VerifiedClerkUser,
 } from "../../src/modules/client-invitations/client-invitation.types.js";
 import { ORG_A, USER_A, actor } from "../helpers/actors.js";
 
@@ -31,6 +32,18 @@ const invitation: ClientInvitation = {
 
 const audit = { actorUserId: USER_A, organizationId: ORG_A, requestId: "00000000-0000-4000-8000-000000000899" };
 
+function clerkIdentity(clerkUserId = "user_new", email = "client@example.test"): VerifiedClerkUser {
+  return {
+    clerkUserId,
+    verifiedEmails: [email],
+    primaryEmail: email,
+    firstName: "Client",
+    lastName: "User",
+    avatarUrl: null,
+    syncedAt: now,
+  };
+}
+
 function repository(): ClientInvitationRepository {
   return {
     actorOwnsEmail: vi.fn(async () => false),
@@ -38,10 +51,10 @@ function repository(): ClientInvitationRepository {
     reserve: vi.fn(async () => invitation),
     finalizeDelivery: vi.fn(async (_id, clerkInvitationId) => ({ ...invitation, clerkInvitationId })),
     cancelDelivery: vi.fn(async () => undefined),
-    grantExisting: vi.fn(async () => ({ kind: "not_found" as const })),
-    beginResend: vi.fn(async () => ({ kind: "not_found" as const })),
+    grantExisting: vi.fn(async () => ({ kind: "organization_not_found" as const })),
+    beginResend: vi.fn(async () => ({ kind: "invitation_not_found" as const })),
     finalizeResend: vi.fn(async (_id, clerkInvitationId) => ({ ...invitation, clerkInvitationId })),
-    revokeAuthorized: vi.fn(async () => "not_found" as const),
+    revokeAuthorized: vi.fn(async () => "invitation_not_found" as const),
     claim: vi.fn(async () => ({ kind: "not_found" as const })),
   };
 }
@@ -49,6 +62,7 @@ function repository(): ClientInvitationRepository {
 function gateway(): ClerkInvitationGateway {
   return {
     findVerifiedUserByEmail: vi.fn(async () => null),
+    getVerifiedUser: vi.fn(async (clerkUserId: string) => clerkIdentity(clerkUserId)),
     getVerifiedEmails: vi.fn(async () => ["client@example.test"]),
     createInvitation: vi.fn(async () => ({ id: "inv_clerk" })),
     revokeInvitation: vi.fn(async () => undefined),
@@ -99,10 +113,7 @@ describe("client invitation service", () => {
   it("grants an existing verified Clerk identity without creating a duplicate identity or invitation", async () => {
     const repo = repository();
     const clerk = gateway();
-    vi.mocked(clerk.findVerifiedUserByEmail).mockResolvedValue({
-      clerkUserId: "user_existing",
-      verifiedEmails: ["client@example.test"],
-    });
+    vi.mocked(clerk.findVerifiedUserByEmail).mockResolvedValue(clerkIdentity("user_existing"));
     vi.mocked(repo.grantExisting).mockResolvedValue({
       kind: "granted",
       invitation: { ...invitation, status: "accepted", acceptedByUserId: "00000000-0000-4000-8000-000000000802", acceptedAt: now },
@@ -116,7 +127,7 @@ describe("client invitation service", () => {
 
     expect(result.outcome).toBe("existing_account_granted");
     expect(repo.grantExisting).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      clerkUserId: "user_existing",
+      identity: expect.objectContaining({ clerkUserId: "user_existing" }),
       membershipRole: "client_manager",
     }), audit);
     expect(repo.reserve).not.toHaveBeenCalled();
@@ -139,25 +150,40 @@ describe("client invitation service", () => {
     expect(clerk.createInvitation).not.toHaveBeenCalled();
   });
 
-  it("maps delayed webhook synchronization to a bounded-retry contract", async () => {
+  it("passes the authenticated Clerk profile to the transactional claim reconciliation", async () => {
     const repo = repository();
     const clerk = gateway();
-    vi.mocked(repo.claim).mockResolvedValue({ kind: "not_synchronized" });
+    vi.mocked(repo.claim).mockResolvedValue({
+      kind: "claimed",
+      invitation: { ...invitation, status: "accepted" },
+      profileExisted: false,
+      reconciliationAttempted: true,
+      membershipCreated: true,
+    });
     const service = new ClientInvitationService(repo, new AuthorizationService(), clerk, "http://127.0.0.1:5173");
 
-    await expect(service.claim("user_new", INVITATION_ID, audit)).rejects.toMatchObject({
-      code: "PROFILE_NOT_SYNCHRONIZED",
-      statusCode: 409,
-      details: { retryable: true },
+    await expect(service.claim("user_new", INVITATION_ID, audit)).resolves.toMatchObject({
+      reconciliationAttempted: true,
+      membershipCreated: true,
     });
-    expect(repo.claim).toHaveBeenCalledWith(INVITATION_ID, "user_new", ["client@example.test"], audit);
+    expect(repo.claim).toHaveBeenCalledWith(
+      INVITATION_ID,
+      expect.objectContaining({ clerkUserId: "user_new", verifiedEmails: ["client@example.test"] }),
+      audit,
+    );
   });
 
   it("keeps claim idempotent and maps expired, revoked, used and mismatched-email states safely", async () => {
     const repo = repository();
     const clerk = gateway();
     const service = new ClientInvitationService(repo, new AuthorizationService(), clerk, "http://127.0.0.1:5173");
-    vi.mocked(repo.claim).mockResolvedValue({ kind: "already_claimed", invitation: { ...invitation, status: "accepted" } });
+    vi.mocked(repo.claim).mockResolvedValue({
+      kind: "already_claimed",
+      invitation: { ...invitation, status: "accepted" },
+      profileExisted: true,
+      reconciliationAttempted: false,
+      membershipCreated: false,
+    });
     await expect(service.claim("user_new", INVITATION_ID, audit)).resolves.toMatchObject({ alreadyClaimed: true });
 
     for (const [kind, code] of [

@@ -7,6 +7,7 @@ import type {
   ClientInvitation,
   ClientInvitationRepository,
   ClerkInvitationGateway,
+  VerifiedClerkUser,
 } from "../../src/modules/client-invitations/client-invitation.types.js";
 import { ORG_A, ORG_B, USER_A, actor } from "../helpers/actors.js";
 import { buildTestApp } from "../helpers/build-test-app.js";
@@ -30,6 +31,18 @@ const invitation: ClientInvitation = {
   createdAt: now,
   updatedAt: now,
 };
+
+function clerkIdentity(clerkUserId = "clerk_internal"): VerifiedClerkUser {
+  return {
+    clerkUserId,
+    verifiedEmails: ["client@example.test"],
+    primaryEmail: "client@example.test",
+    firstName: "Client",
+    lastName: "User",
+    avatarUrl: null,
+    syncedAt: now,
+  };
+}
 
 const authenticated: AuthenticationProvider = {
   authenticate: () => Promise.resolve({ clerkUserId: "clerk_internal" }),
@@ -65,17 +78,24 @@ function repository(): ClientInvitationRepository {
     reserve: vi.fn(async () => invitation),
     finalizeDelivery: vi.fn(async () => invitation),
     cancelDelivery: vi.fn(async () => undefined),
-    grantExisting: vi.fn(async () => ({ kind: "not_found" as const })),
+    grantExisting: vi.fn(async () => ({ kind: "organization_not_found" as const })),
     beginResend: vi.fn(async () => ({ kind: "already_replaced" as const, invitation })),
     finalizeResend: vi.fn(async () => invitation),
     revokeAuthorized: vi.fn(async () => invitation),
-    claim: vi.fn(async () => ({ kind: "not_synchronized" as const })),
+    claim: vi.fn(async () => ({
+      kind: "claimed" as const,
+      invitation: { ...invitation, status: "accepted" as const },
+      profileExisted: false,
+      reconciliationAttempted: true,
+      membershipCreated: true,
+    })),
   };
 }
 
 function gateway(): ClerkInvitationGateway {
   return {
     findVerifiedUserByEmail: vi.fn(async () => null),
+    getVerifiedUser: vi.fn(async (clerkUserId: string) => clerkIdentity(clerkUserId)),
     getVerifiedEmails: vi.fn(async () => ["client@example.test"]),
     createInvitation: vi.fn(async () => ({ id: "inv_clerk" })),
     revokeInvitation: vi.fn(async () => undefined),
@@ -144,7 +164,7 @@ describe("Phase 8A invitation HTTP routes", () => {
     expect(repo.listAuthorized).not.toHaveBeenCalled();
   });
 
-  it("claim requires an active Clerk session and exposes delayed webhook sync as retryable 409", async () => {
+  it("claim requires an active Clerk session and returns after secure profile reconciliation", async () => {
     const repo = repository();
     app = await buildTestApp({}, {
       authenticationProvider: unauthenticated,
@@ -164,20 +184,21 @@ describe("Phase 8A invitation HTTP routes", () => {
       clientInvitationRepository: repo,
       clerkInvitationGateway: gateway(),
     });
-    const pending = await app.inject({
+    const claimed = await app.inject({
       method: "POST",
       url: "/api/v1/client-invitations/claim",
       payload: { invitationId: INVITATION_ID },
     });
-    expect(pending.statusCode).toBe(409);
-    expect(pending.json()).toMatchObject({
-      error: { code: "PROFILE_NOT_SYNCHRONIZED", details: { retryable: true } },
+    expect(claimed.statusCode).toBe(200);
+    expect(claimed.json()).toMatchObject({
+      data: { invitation: { id: INVITATION_ID, status: "accepted" }, alreadyClaimed: false },
     });
+    expect(claimed.body).not.toMatch(/profileExisted|reconciliationAttempted|membershipCreated/);
   });
 
   it("maps missing and invalid-state actions to 404/409", async () => {
     const repo = repository();
-    vi.mocked(repo.beginResend).mockResolvedValue({ kind: "not_found" });
+    vi.mocked(repo.beginResend).mockResolvedValue({ kind: "invitation_not_found" });
     vi.mocked(repo.revokeAuthorized).mockResolvedValue("invalid_state");
     app = await buildTestApp({}, {
       authenticationProvider: authenticated,
@@ -185,8 +206,43 @@ describe("Phase 8A invitation HTTP routes", () => {
       clientInvitationRepository: repo,
       clerkInvitationGateway: gateway(),
     });
-    expect((await app.inject({ method: "POST", url: `/api/v1/organizations/${ORG_A}/invitations/${INVITATION_ID}/resend` })).statusCode).toBe(404);
+    const missing = await app.inject({ method: "POST", url: `/api/v1/organizations/${ORG_A}/invitations/${INVITATION_ID}/resend` });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toMatchObject({
+      error: { code: "INVITATION_NOT_FOUND", requestId: expect.any(String) },
+    });
     expect((await app.inject({ method: "POST", url: `/api/v1/organizations/${ORG_A}/invitations/${INVITATION_ID}/revoke` })).statusCode).toBe(409);
+  });
+
+  it("distinguishes a missing organization and a duplicate pending invitation on create", async () => {
+    const repo = repository();
+    vi.mocked(repo.reserve).mockResolvedValueOnce(null).mockResolvedValueOnce("duplicate");
+    app = await buildTestApp({}, {
+      authenticationProvider: authenticated,
+      identityRepository: identity(),
+      clientInvitationRepository: repo,
+      clerkInvitationGateway: gateway(),
+    });
+    const missingOrganization = await app.inject({
+      method: "POST",
+      url: `/api/v1/organizations/${ORG_A}/invitations`,
+      payload: { email: "missing-org@example.test", membershipRole: "client_contact" },
+    });
+    expect(missingOrganization.statusCode).toBe(404);
+    expect(missingOrganization.json()).toMatchObject({
+      error: { code: "ORGANIZATION_NOT_FOUND", requestId: expect.any(String) },
+    });
+
+    const duplicate = await app.inject({
+      method: "POST",
+      url: `/api/v1/organizations/${ORG_A}/invitations`,
+      payload: { email: "duplicate@example.test", membershipRole: "client_contact" },
+    });
+    expect(duplicate.statusCode).toBe(409);
+    expect(duplicate.json()).toMatchObject({
+      error: { code: "CONFLICT", message: "A pending invitation already exists for this email and organization" },
+    });
+    expect(repo.finalizeDelivery).not.toHaveBeenCalled();
   });
 
   it("rate limits abusive resend attempts", async () => {

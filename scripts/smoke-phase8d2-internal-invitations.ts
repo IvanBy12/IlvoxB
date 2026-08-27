@@ -37,6 +37,18 @@ class SmokeClerkGateway implements ClerkInvitationGateway {
   readonly created: { readonly id: string; readonly email: string; readonly redirectUrl: string }[] = [];
   private sequence = 0;
   findVerifiedUserByEmail(normalizedEmail: string) { return Promise.resolve(this.verified.get(normalizedEmail) ?? null); }
+  getVerifiedUser(clerkUserId: string) {
+    const verifiedEmails = this.emails.get(clerkUserId) ?? [];
+    return Promise.resolve({
+      clerkUserId,
+      verifiedEmails,
+      primaryEmail: verifiedEmails[0] ?? null,
+      firstName: "Smoke",
+      lastName: null,
+      avatarUrl: null,
+      syncedAt: new Date(),
+    });
+  }
   getVerifiedEmails(clerkUserId: string) { return Promise.resolve(this.emails.get(clerkUserId) ?? []); }
   createInvitation(input: { readonly email: string; readonly redirectUrl: string; readonly expiresInDays: number }) {
     this.sequence += 1;
@@ -113,10 +125,10 @@ try {
      SELECT $1,$2,r.id,'organization','active',now() FROM roles r WHERE r.scope='organization' AND r.code='client_contact'`,
     [ids.organization, ids.dual],
   );
-  gateway.verified.set(emails.existing.toLowerCase(), { clerkUserId: clerkIds.existing, verifiedEmails: [emails.existing] });
-  gateway.verified.set(emails.dual.toLowerCase(), { clerkUserId: clerkIds.dual, verifiedEmails: [emails.dual] });
   gateway.emails.set(clerkIds.existing, [emails.existing]);
   gateway.emails.set(clerkIds.dual, [emails.dual]);
+  gateway.verified.set(emails.existing.toLowerCase(), await gateway.getVerifiedUser(clerkIds.existing));
+  gateway.verified.set(emails.dual.toLowerCase(), await gateway.getVerifiedUser(clerkIds.dual));
 
   const rolesResponse = await app.inject({ method: "GET", url: "/api/v1/internal-roles", headers: headers(clerkIds.owner) });
   status(rolesResponse, 200, "ROLES");

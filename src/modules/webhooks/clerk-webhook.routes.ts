@@ -25,16 +25,34 @@ export const clerkWebhookRoutes: FastifyPluginCallback<ClerkWebhookRoutesOptions
     const rawBody = request.body;
     const eventId = eventIdFromHeaders(request.headers);
     if (!Buffer.isBuffer(rawBody) || eventId === undefined || eventId.trim() === "") {
+      request.log.warn(
+        { requestId: request.id, eventId: eventId ?? null, result: "invalid_request" },
+        "Clerk webhook rejected",
+      );
       throw new AppError({ code: ErrorCode.WebhookInvalid, message: "Invalid webhook", statusCode: 400 });
     }
     let event;
     try {
       event = await options.verifier.verify(rawBody, request);
     } catch {
+      request.log.warn(
+        { requestId: request.id, eventId, result: "verification_failed" },
+        "Clerk webhook rejected",
+      );
       throw new AppError({ code: ErrorCode.WebhookInvalid, message: "Invalid webhook", statusCode: 400 });
     }
     try {
       const result = await options.service.process(eventId, rawBody, event);
+      request.log.info(
+        {
+          requestId: request.id,
+          eventId,
+          eventType: event.type,
+          clerkUserId: event.clerkUserId,
+          result: result.status,
+        },
+        "Clerk webhook synchronization completed",
+      );
       return successResponse(result);
     } catch (error) {
       const failure = describeClerkWebhookFailure(error);
@@ -44,6 +62,8 @@ export const clerkWebhookRoutes: FastifyPluginCallback<ClerkWebhookRoutesOptions
           requestId: request.id,
           eventId,
           eventType: event.type,
+          clerkUserId: event.clerkUserId,
+          result: "failed",
           classification: failure.classification,
           databaseError: failure.databaseError,
         },

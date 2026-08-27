@@ -251,7 +251,7 @@ Problemas técnicos actuales del frontend que no se corrigen en esta fase:
 
 ### Webhooks
 
-- Ruta pública dedicada: `POST /api/v1/webhooks/clerk`.
+- Ruta pública dedicada: `POST /webhooks/clerk`.
 - Verificación de firma sobre el body crudo antes de parsear/usar el evento.
 - Idempotencia mediante `identity_webhook_events.clerk_event_id`.
 - Eventos mínimos: `user.created`, `user.updated`, `user.deleted`.
@@ -301,7 +301,7 @@ Convención propuesta: prefijo `/api/v1`, JSON `{ "data": ... }`, metadatos de p
 | `GET /health/ready` | DB y configuración listas | pública, respuesta mínima | prueba PostgreSQL |
 | `GET /api/v1/me` | perfil, membresías y permisos efectivos | autenticado/activo | usuarios y RBAC |
 | `PATCH /api/v1/me` | perfil de negocio editable | autenticado/activo | `app_users`, auditoría; alcance por definir |
-| `POST /api/v1/webhooks/clerk` | sincronización firmada | firma Clerk | webhook events, usuarios |
+| `POST /webhooks/clerk` | sincronización firmada | firma Clerk | webhook events, usuarios |
 
 ### Público y comercial
 

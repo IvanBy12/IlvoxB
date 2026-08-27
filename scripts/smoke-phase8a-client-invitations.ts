@@ -19,15 +19,20 @@ if (!["127.0.0.1", "localhost"].includes(parsed.hostname)) {
 
 class ControlledClerkGateway implements ClerkInvitationGateway {
   readonly existing = new Map<string, VerifiedClerkUser>();
-  readonly verified = new Map<string, readonly string[]>();
+  readonly profiles = new Map<string, VerifiedClerkUser>();
   readonly activeInvitations = new Set<string>();
   private sequence = 0;
 
   findVerifiedUserByEmail(email: string) {
     return Promise.resolve(this.existing.get(email) ?? null);
   }
+  getVerifiedUser(clerkUserId: string) {
+    const profile = this.profiles.get(clerkUserId);
+    if (profile === undefined) throw new Error("SMOKE_CLERK_PROFILE_MISSING");
+    return Promise.resolve(profile);
+  }
   getVerifiedEmails(clerkUserId: string) {
-    return Promise.resolve(this.verified.get(clerkUserId) ?? []);
+    return Promise.resolve(this.profiles.get(clerkUserId)?.verifiedEmails ?? []);
   }
   createInvitation() {
     const id = `inv_${PREFIX}${++this.sequence}`;
@@ -69,6 +74,15 @@ const actor: ActorContext = {
 };
 
 const gateway = new ControlledClerkGateway();
+const clerkProfile = (clerkUserId: string, email: string): VerifiedClerkUser => ({
+  clerkUserId,
+  verifiedEmails: [email],
+  primaryEmail: email,
+  firstName: "Smoke",
+  lastName: "Client",
+  avatarUrl: null,
+  syncedAt: new Date(),
+});
 const repository = new PostgresClientInvitationRepository(pool);
 const service = new ClientInvitationService(
   repository,
@@ -101,7 +115,10 @@ async function cleanup(): Promise<void> {
   await pool.query("DELETE FROM organization_memberships WHERE organization_id = ANY($1::uuid[])", [[organizationA, organizationB]]);
   await pool.query("DELETE FROM organization_invitations WHERE organization_id = ANY($1::uuid[])", [[organizationA, organizationB]]);
   await pool.query("DELETE FROM organizations WHERE id = ANY($1::uuid[])", [[organizationA, organizationB]]);
-  await pool.query("DELETE FROM app_users WHERE id = ANY($1::uuid[])", [[actorUserId, newUserId, existingUserId]]);
+  await pool.query(
+    "DELETE FROM app_users WHERE id = ANY($1::uuid[]) OR primary_email LIKE lower($2)",
+    [[actorUserId, newUserId, existingUserId], `${PREFIX}%`],
+  );
 }
 
 try {
@@ -121,12 +138,7 @@ try {
     membershipRole: "client_contact",
   }, audit());
   if (created.outcome !== "invitation_sent") throw new Error("NEW_INVITATION_NOT_SENT");
-  await pool.query(
-    `INSERT INTO app_users (id, clerk_user_id, primary_email, status)
-     VALUES ($1, $2, $3, 'pending')`,
-    [newUserId, clerkNew, newEmail],
-  );
-  gateway.verified.set(clerkNew, [newEmail]);
+  gateway.profiles.set(clerkNew, clerkProfile(clerkNew, newEmail));
   const claimed = await service.claim(clerkNew, created.invitation.id, audit());
   const claimedAgain = await service.claim(clerkNew, created.invitation.id, audit());
   if (claimed.alreadyClaimed || !claimedAgain.alreadyClaimed) throw new Error("CLAIM_NOT_IDEMPOTENT");
@@ -134,9 +146,28 @@ try {
   if (!profile.organizations.some((organization) => organization.id === organizationA && organization.role === "client_contact")) {
     throw new Error("ME_MISSING_CLIENT_ORGANIZATION");
   }
+  const reconciledState = await pool.query<{
+    readonly user_count: number;
+    readonly membership_count: number;
+    readonly invitation_status: string;
+  }>(
+    `SELECT
+       (SELECT count(*)::int FROM app_users WHERE clerk_user_id=$1) AS user_count,
+       (SELECT count(*)::int
+          FROM organization_memberships m
+          JOIN app_users u ON u.id=m.user_id
+         WHERE u.clerk_user_id=$1 AND m.organization_id=$2 AND m.status='active') AS membership_count,
+       (SELECT status FROM organization_invitations WHERE id=$3) AS invitation_status`,
+    [clerkNew, organizationA, created.invitation.id],
+  );
+  const reconciled = reconciledState.rows[0];
+  if (reconciled?.user_count !== 1 || reconciled.membership_count !== 1 || reconciled.invitation_status !== "accepted") {
+    throw new Error("RECONCILED_DATABASE_STATE_INVALID");
+  }
 
-  gateway.existing.set(existingEmail, { clerkUserId: clerkExisting, verifiedEmails: [existingEmail] });
-  gateway.verified.set(clerkExisting, [existingEmail]);
+  const existingProfile = clerkProfile(clerkExisting, existingEmail);
+  gateway.existing.set(existingEmail, existingProfile);
+  gateway.profiles.set(clerkExisting, existingProfile);
   const existing = await service.create(actor, organizationA, {
     email: existingEmail,
     membershipRole: "client_manager",
@@ -200,6 +231,9 @@ try {
     newInvitation: true,
     claimIdempotent: true,
     meOrganization: true,
+    reconciledUserRows: reconciled.user_count,
+    membershipRows: reconciled.membership_count,
+    invitationStatus: reconciled.invitation_status,
     existingAccount: true,
     duplicateRejected: true,
     expiration: true,

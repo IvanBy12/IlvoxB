@@ -19,6 +19,7 @@ const securityPluginImplementation: FastifyPluginAsync<SecurityPluginOptions> = 
 
   await app.register(cors, {
     credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     exposedHeaders: ["Retry-After", "X-Request-Id"],
     origin(origin, callback) {
       callback(null, origin === undefined || allowedOrigins.has(origin));

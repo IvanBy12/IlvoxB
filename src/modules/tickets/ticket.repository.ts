@@ -6,6 +6,7 @@ import type {
   TicketCommentRecord,
   TicketCommentVisibility,
   TicketCreateInput,
+  TicketDetailRecord,
   TicketListInput,
   TicketPatch,
   TicketPriority,
@@ -35,6 +36,12 @@ interface TicketRow extends QueryResultRow {
   readonly updated_at: Date;
 }
 
+interface TicketDetailRow extends TicketRow {
+  readonly requester_first_name: string | null;
+  readonly requester_last_name: string | null;
+  readonly requester_display_name: string;
+}
+
 interface ProjectRow extends QueryResultRow {
   readonly id: string;
   readonly organization_id: string;
@@ -46,6 +53,9 @@ interface CommentRow extends QueryResultRow {
   readonly ticket_id: string;
   readonly organization_id: string | null;
   readonly author_user_id: string;
+  readonly author_first_name: string | null;
+  readonly author_last_name: string | null;
+  readonly author_display_name: string;
   readonly visibility: TicketCommentVisibility;
   readonly content: string;
   readonly created_at: Date;
@@ -78,12 +88,30 @@ function mapTicket(row: TicketRow): TicketRecord {
   };
 }
 
+function mapTicketDetail(row: TicketDetailRow): TicketDetailRecord {
+  return {
+    ...mapTicket(row),
+    requester: {
+      id: row.requester_user_id,
+      firstName: row.requester_first_name,
+      lastName: row.requester_last_name,
+      displayName: row.requester_display_name,
+    },
+  };
+}
+
 function mapComment(row: CommentRow): TicketCommentRecord {
   return {
     id: row.id,
     ticketId: row.ticket_id,
     organizationId: row.organization_id,
     authorUserId: row.author_user_id,
+    author: {
+      id: row.author_user_id,
+      firstName: row.author_first_name,
+      lastName: row.author_last_name,
+      displayName: row.author_display_name,
+    },
     visibility: row.visibility,
     content: row.content,
     createdAt: row.created_at,
@@ -288,13 +316,19 @@ export class PostgresTicketRepository implements TicketRepository {
     return { items: rows.rows.map(mapTicket), pagination: paginationMeta(input, total) };
   }
 
-  async findAuthorized(scope: AuthorizedRepositoryScope, ticketId: string): Promise<TicketRecord | null> {
+  async findAuthorized(scope: AuthorizedRepositoryScope, ticketId: string): Promise<TicketDetailRecord | null> {
     const scoped = ticketScope(scope, "t", 2);
-    const result = await this.pool.query<TicketRow>(
-      `SELECT ${TICKET_COLUMNS} FROM tickets t WHERE t.id = $1 AND ${scoped.sql}`,
+    const result = await this.pool.query<TicketDetailRow>(
+      `SELECT ${TICKET_COLUMNS}, requester.first_name AS requester_first_name,
+              requester.last_name AS requester_last_name,
+              COALESCE(nullif(concat_ws(' ', requester.first_name, requester.last_name), ''),
+                       requester.primary_email) AS requester_display_name
+       FROM tickets t
+       JOIN app_users requester ON requester.id = t.requester_user_id
+       WHERE t.id = $1 AND ${scoped.sql}`,
       [ticketId, ...scoped.values],
     );
-    return result.rows[0] === undefined ? null : mapTicket(result.rows[0]);
+    return result.rows[0] === undefined ? null : mapTicketDetail(result.rows[0]);
   }
 
   async create(
@@ -600,10 +634,15 @@ export class PostgresTicketRepository implements TicketRepository {
     const ticket = await this.findAuthorized(scope, ticketId);
     if (ticket === null) return null;
     const rows = await this.pool.query<CommentRow>(
-      `SELECT id, ticket_id, organization_id, author_user_id, visibility, content, created_at, updated_at
-       FROM ticket_comments
-       WHERE ticket_id = $1 ${includeInternal ? "" : "AND visibility = 'client'"}
-       ORDER BY created_at ASC, id ASC`,
+      `SELECT c.id, c.ticket_id, c.organization_id, c.author_user_id, c.visibility, c.content,
+              c.created_at, c.updated_at, author.first_name AS author_first_name,
+              author.last_name AS author_last_name,
+              COALESCE(nullif(concat_ws(' ', author.first_name, author.last_name), ''),
+                       author.primary_email) AS author_display_name
+       FROM ticket_comments c
+       JOIN app_users author ON author.id = c.author_user_id
+       WHERE c.ticket_id = $1 ${includeInternal ? "" : "AND c.visibility = 'client'"}
+       ORDER BY c.created_at ASC, c.id ASC`,
       [ticketId],
     );
     return rows.rows.map(mapComment);
@@ -621,11 +660,19 @@ export class PostgresTicketRepository implements TicketRepository {
       const ticket = await lockedTicket(client, scope, ticketId);
       if (ticket === null) return "not_found";
       const result = await client.query<CommentRow>(
-        `INSERT INTO ticket_comments (
-           ticket_id, organization_id, author_user_id, visibility, content
-         ) VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, ticket_id, organization_id, author_user_id, visibility, content,
-           created_at, updated_at`,
+        `WITH inserted AS (
+           INSERT INTO ticket_comments (
+             ticket_id, organization_id, author_user_id, visibility, content
+           ) VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, ticket_id, organization_id, author_user_id, visibility, content,
+             created_at, updated_at
+         )
+         SELECT inserted.*, author.first_name AS author_first_name,
+                author.last_name AS author_last_name,
+                COALESCE(nullif(concat_ws(' ', author.first_name, author.last_name), ''),
+                         author.primary_email) AS author_display_name
+         FROM inserted
+         JOIN app_users author ON author.id = inserted.author_user_id`,
         [ticketId, ticket.organizationId, authorUserId, visibility, content.trim()],
       );
       const comment = mapComment(result.rows[0]!);

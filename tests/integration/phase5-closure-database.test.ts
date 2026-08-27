@@ -351,11 +351,18 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 5 closure PostgreSQL behav
   });
 
   it("applies task filters and global/assigned/own/organization scopes to count and rows", async () => {
+    expect(await tasks.create(globalScope, {
+      projectId: PROJECT_A,
+      title: "Client cannot own operational task",
+      description: "Tenant member is not an internal assignee",
+      assignedToUserId: USER_MEMBER,
+      dueDate: "2026-08-10",
+    }, USER_ADMIN, audit())).toBe("ineligible_user");
     const projectTask = await tasks.create(globalScope, {
       projectId: PROJECT_A,
       title: "Scoped project task",
       description: "Filtered",
-      assignedToUserId: USER_MEMBER,
+      assignedToUserId: USER_ADMIN,
       dueDate: "2026-08-10",
     }, USER_ADMIN, audit());
     const standalone = await tasks.create(globalScope, {
@@ -386,7 +393,7 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 5 closure PostgreSQL behav
       ...input,
       projectId: PROJECT_A,
       status: "pending",
-      assignedToUserId: USER_MEMBER,
+      assignedToUserId: USER_ADMIN,
       createdByUserId: USER_ADMIN,
       dueFrom: "2026-08-01",
       dueTo: "2026-08-31",

@@ -65,12 +65,12 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 6 ticket PostgreSQL behavi
     });
     tickets = new PostgresTicketRepository(pool);
     await pool.query(
-      `INSERT INTO app_users (id,clerk_user_id,primary_email,status) VALUES
-       ($1,'phase6_admin','phase6-admin@example.test','active'),
-       ($2,'phase6_requester','phase6-requester@example.test','active'),
-       ($3,'phase6_other','phase6-other@example.test','active'),
-       ($4,'phase6_support','phase6-support@example.test','active'),
-       ($5,'phase6_revoked','phase6-revoked@example.test','active')`,
+      `INSERT INTO app_users (id,clerk_user_id,primary_email,first_name,last_name,status) VALUES
+       ($1,'phase6_admin','phase6-admin@example.test','Admin','Operator','active'),
+       ($2,'phase6_requester','phase6-requester@example.test','Client','Requester','active'),
+       ($3,'phase6_other','phase6-other@example.test','Other','User','active'),
+       ($4,'phase6_support','phase6-support@example.test','Support','Agent','active'),
+       ($5,'phase6_revoked','phase6-revoked@example.test','Revoked','Client','active')`,
       [ADMIN, REQUESTER, OTHER, SUPPORT, REVOKED],
     );
     await pool.query(
@@ -247,6 +247,40 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 6 ticket PostgreSQL behavi
     expect(results.filter((result) => typeof result === "object")).toHaveLength(1);
   });
 
+  it("accepts a current transition timestamp and rejects the previous timestamp after success", async () => {
+    const created = await tickets.create(globalScope, {
+      type: "incident",
+      subject: "Sequential transition",
+      description: "Optimistic version replacement",
+    }, REQUESTER, audit());
+    expect(typeof created).toBe("object");
+    if (typeof created !== "object") return;
+    const transitioned = await tickets.transition(
+      globalScope,
+      created.id,
+      "new",
+      "classifying",
+      undefined,
+      undefined,
+      created.updatedAt,
+      audit(),
+    );
+    expect(transitioned).toMatchObject({ status: "classifying" });
+    expect(typeof transitioned).toBe("object");
+    if (typeof transitioned !== "object") return;
+    expect(transitioned.updatedAt.getTime()).toBeGreaterThan(created.updatedAt.getTime());
+    expect(await tickets.transition(
+      globalScope,
+      created.id,
+      "classifying",
+      "cancelled",
+      undefined,
+      "Stale client",
+      created.updatedAt,
+      audit(),
+    )).toBe("conflict");
+  });
+
   it("derives comment organization, filters internal visibility and omits content from audit", async () => {
     const created = await tickets.create(globalScope, {
       type: "question",
@@ -271,8 +305,19 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 6 ticket PostgreSQL behavi
       "Internal details",
       audit(SUPPORT),
     );
-    expect(client).toMatchObject({ organizationId: null, authorUserId: REQUESTER });
-    expect(internal).toMatchObject({ organizationId: null, authorUserId: SUPPORT });
+    expect(client).toMatchObject({
+      organizationId: null,
+      authorUserId: REQUESTER,
+      author: { id: REQUESTER, firstName: "Client", lastName: "Requester", displayName: "Client Requester" },
+    });
+    expect(internal).toMatchObject({
+      organizationId: null,
+      authorUserId: SUPPORT,
+      author: { id: SUPPORT, firstName: "Support", lastName: "Agent", displayName: "Support Agent" },
+    });
+    expect(await tickets.findAuthorized(globalScope, created.id)).toMatchObject({
+      requester: { id: REQUESTER, firstName: "Client", lastName: "Requester", displayName: "Client Requester" },
+    });
     expect((await tickets.listComments(requesterOwn, created.id, false))?.map((item) => item.visibility))
       .toEqual(["client"]);
     expect((await tickets.listComments(globalScope, created.id, true))?.map((item) => item.visibility))

@@ -393,7 +393,13 @@ export class PostgresTaskRepository implements TaskRepository {
   ): Promise<boolean> {
     const result = await client.query(
       `SELECT 1 FROM app_users u
-       WHERE u.id = $2 AND u.status = 'active' AND (
+       WHERE u.id = $2 AND u.status = 'active'
+         AND EXISTS (
+           SELECT 1 FROM user_roles internal_ur
+           JOIN roles internal_r ON internal_r.id = internal_ur.role_id AND internal_r.scope = 'global'
+           WHERE internal_ur.user_id = u.id
+         )
+         AND (
          EXISTS (
            SELECT 1 FROM project_members pm
            WHERE pm.project_id = $1 AND pm.user_id = u.id AND pm.status = 'active'

@@ -68,4 +68,27 @@ describe("local CORS contract", () => {
       );
     },
   );
+
+  it.each(LOCAL_ORIGINS)(
+    "allows membership PATCH preflight for the local origin %s",
+    async (origin) => {
+      app = await buildTestApp();
+      const response = await app.inject({
+        method: "OPTIONS",
+        url: "/api/v1/organizations/00000000-0000-4000-8000-000000000001/members/00000000-0000-4000-8000-000000000002",
+        headers: {
+          origin,
+          "access-control-request-method": "PATCH",
+          "access-control-request-headers": "authorization,content-type",
+        },
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(response.headers["access-control-allow-origin"]).toBe(origin);
+      expect(response.headers["access-control-allow-methods"]?.split(",").map((method) => method.trim()))
+        .toEqual(expect.arrayContaining(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]));
+      expect(response.headers["access-control-allow-headers"]?.toLowerCase()).toContain("authorization");
+      expect(response.headers["access-control-allow-headers"]?.toLowerCase()).toContain("content-type");
+    },
+  );
 });

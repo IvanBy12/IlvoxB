@@ -45,9 +45,11 @@ describe("official Clerk webhook verification", () => {
   it("accepts a valid signature and preserves the exact raw payload", async () => {
     const raw = payload();
     let observed = "";
+    let observedUserId = "";
     const processor: ClerkWebhookProcessor = {
-      process: (eventId, body): Promise<ClerkWebhookResult> => {
+      process: (eventId, body, event): Promise<ClerkWebhookResult> => {
         observed = body.toString("utf8");
+        observedUserId = event.clerkUserId;
         return Promise.resolve({ status: "processed", eventId });
       },
     };
@@ -58,6 +60,8 @@ describe("official Clerk webhook verification", () => {
       headers: signedHeaders(raw), payload: raw });
     expect(response.statusCode).toBe(200);
     expect(observed).toBe(raw);
+    expect(observedUserId).toBe("user_clerk_phase3");
+    expect(response.json()).toEqual({ data: { status: "processed", eventId: messageId } });
   });
 
   it("rejects an invalid signature", async () => {

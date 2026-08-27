@@ -1,6 +1,7 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import Fastify from "fastify";
 import pg, { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AuthorizationService } from "../../src/common/auth/authorization.service.js";
@@ -9,6 +10,8 @@ import { TicketClientActionService } from "../../src/common/auth/ticket-client-a
 import { FileRepository } from "../../src/modules/files/file.repository.js";
 import { PostgresIdentityRepository } from "../../src/modules/identity/identity.repository.js";
 import { ClerkWebhookService } from "../../src/modules/webhooks/clerk-webhook.service.js";
+import { clerkWebhookRoutes } from "../../src/modules/webhooks/clerk-webhook.routes.js";
+import { OfficialClerkWebhookVerifier } from "../../src/modules/webhooks/clerk-webhook.verifier.js";
 import { ORG_A, ORG_B, USER_A, USER_B, actor } from "../helpers/actors.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -142,6 +145,69 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 3 PostgreSQL behavior", ()
     );
     expect(tombstone.rows[0]?.status).toBe("deleted");
     expect(tombstone.rows[0]?.primary_email).not.toBe("must-not-resurrect@example.test");
+  });
+
+  it("persists a signed user.created through the HTTP route and replays it idempotently", async () => {
+    const signingKey = Buffer.from("0123456789abcdef0123456789abcdef", "utf8");
+    const signingSecret = `whsec_${signingKey.toString("base64")}`;
+    const eventId = `msg_phase3_db_${randomBytes(5).toString("hex")}`;
+    const clerkUserId = `clerk_http_${randomBytes(5).toString("hex")}`;
+    const raw = JSON.stringify({
+      object: "event",
+      type: "user.created",
+      timestamp: Date.now(),
+      data: {
+        id: clerkUserId,
+        primary_email_address_id: "email_primary",
+        email_addresses: [{ id: "email_primary", email_address: "http-webhook@example.test" }],
+        first_name: "HTTP",
+        last_name: "Webhook",
+        image_url: null,
+      },
+    });
+    const timestamp = String(Math.floor(Date.now() / 1_000));
+    const signature = createHmac("sha256", signingKey)
+      .update(`${eventId}.${timestamp}.${raw}`)
+      .digest("base64");
+    const app = Fastify({ logger: false });
+    await app.register(clerkWebhookRoutes, {
+      verifier: new OfficialClerkWebhookVerifier(signingSecret),
+      service: webhook,
+    });
+
+    try {
+      const request = () => app.inject({
+        method: "POST",
+        url: "/webhooks/clerk",
+        headers: {
+          "content-type": "application/json",
+          "svix-id": eventId,
+          "svix-timestamp": timestamp,
+          "svix-signature": `v1,${signature}`,
+        },
+        payload: raw,
+      });
+      const first = await request();
+      const replay = await request();
+      expect(first.statusCode, first.body).toBe(200);
+      expect(first.json()).toEqual({ data: { status: "processed", eventId } });
+      expect(replay.statusCode, replay.body).toBe(200);
+      expect(replay.json()).toEqual({ data: { status: "duplicate", eventId } });
+
+      const users = await pool.query<{ readonly count: string }>(
+        "SELECT count(*)::text AS count FROM app_users WHERE clerk_user_id=$1",
+        [clerkUserId],
+      );
+      const events = await pool.query<{ readonly status: string; readonly attempt_count: number }>(
+        `SELECT status,attempt_count FROM identity_webhook_events
+         WHERE clerk_event_id=$1`,
+        [eventId],
+      );
+      expect(users.rows[0]?.count).toBe("1");
+      expect(events.rows).toEqual([{ status: "processed", attempt_count: 1 }]);
+    } finally {
+      await app.close();
+    }
   });
 
   it("serializes concurrent duplicate webhook deliveries", async () => {

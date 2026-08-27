@@ -12,6 +12,23 @@ function verifiedEmails(user: Awaited<ReturnType<ClerkClient["users"]["getUser"]
     .map((item) => normalizeEmail(item.emailAddress));
 }
 
+function mapVerifiedUser(
+  user: Awaited<ReturnType<ClerkClient["users"]["getUser"]>>,
+): VerifiedClerkUser {
+  const emails = verifiedEmails(user);
+  const primary = user.emailAddresses.find((item) =>
+    item.id === user.primaryEmailAddressId && item.verification?.status === "verified");
+  return {
+    clerkUserId: user.id,
+    verifiedEmails: emails,
+    primaryEmail: primary === undefined ? emails[0] ?? null : normalizeEmail(primary.emailAddress),
+    firstName: user.firstName,
+    lastName: user.lastName,
+    avatarUrl: user.imageUrl,
+    syncedAt: new Date(user.updatedAt),
+  };
+}
+
 export class OfficialClerkInvitationGateway implements ClerkInvitationGateway {
   private readonly client: ClerkClient;
 
@@ -29,11 +46,15 @@ export class OfficialClerkInvitationGateway implements ClerkInvitationGateway {
       .filter(({ emails }) => emails.includes(normalizedEmail));
     if (exact.length === 0) return null;
     if (exact.length > 1) throw new Error("Multiple Clerk identities share the verified email");
-    return { clerkUserId: exact[0]!.user.id, verifiedEmails: exact[0]!.emails };
+    return mapVerifiedUser(exact[0]!.user);
+  }
+
+  async getVerifiedUser(clerkUserId: string): Promise<VerifiedClerkUser> {
+    return mapVerifiedUser(await this.client.users.getUser(clerkUserId));
   }
 
   async getVerifiedEmails(clerkUserId: string): Promise<readonly string[]> {
-    return verifiedEmails(await this.client.users.getUser(clerkUserId));
+    return (await this.getVerifiedUser(clerkUserId)).verifiedEmails;
   }
 
   async createInvitation(input: {

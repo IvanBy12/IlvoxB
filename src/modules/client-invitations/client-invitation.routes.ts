@@ -48,13 +48,33 @@ export const clientInvitationRoutes: FastifyPluginCallback<ClientInvitationRoute
     { preHandler: app.requireActor, schema: { params: ClientInvitationOrganizationParamsSchema, body: ClientInvitationCreateBodySchema } },
     async (request, reply) => {
       if (request.actor === null) throw new Error("Authenticated actor was not constructed");
-      const result = await options.service.create(
-        request.actor,
-        request.params.organizationId,
-        request.body,
-        auditContext(request, request.params.organizationId),
-      );
-      return reply.status(201).send(successResponse(result));
+      const normalizedEmail = request.body.email.trim().toLowerCase();
+      try {
+        const result = await options.service.create(
+          request.actor,
+          request.params.organizationId,
+          request.body,
+          auditContext(request, request.params.organizationId),
+        );
+        request.log.info({
+          requestId: request.id,
+          organizationId: request.params.organizationId,
+          localInvitationId: result.invitation.id,
+          clerkInvitationId: result.invitation.clerkInvitationId,
+          normalizedEmail,
+          result: result.outcome,
+        }, "Client invitation creation completed");
+        return reply.status(201).send(successResponse(result));
+      } catch (error) {
+        request.log.warn({
+          requestId: request.id,
+          organizationId: request.params.organizationId,
+          normalizedEmail,
+          errorCode: error instanceof AppError ? error.code : ErrorCode.InternalError,
+          result: "failed",
+        }, "Client invitation creation failed");
+        throw error;
+      }
     },
   );
 
@@ -105,11 +125,42 @@ export const clientInvitationRoutes: FastifyPluginCallback<ClientInvitationRoute
           statusCode: 401,
         });
       }
-      return successResponse(await options.service.claim(
-        external.clerkUserId,
-        request.body.invitationId,
-        auditContext(request),
-      ));
+      try {
+        const result = await options.service.claim(
+          external.clerkUserId,
+          request.body.invitationId,
+          auditContext(request),
+        );
+        request.log.info({
+          requestId: request.id,
+          clerkUserId: external.clerkUserId,
+          localInvitationId: result.invitation.id,
+          organizationId: result.invitation.organizationId,
+          profileExists: result.profileExisted,
+          reconciliationAttempted: result.reconciliationAttempted,
+          membershipCreated: result.membershipCreated,
+          result: result.alreadyClaimed ? "already_claimed" : "claimed",
+        }, "Client invitation claim completed");
+        return successResponse({
+          invitation: result.invitation,
+          alreadyClaimed: result.alreadyClaimed,
+        });
+      } catch (error) {
+        request.log.warn(
+          {
+            requestId: request.id,
+            clerkUserId: external.clerkUserId,
+            localInvitationId: request.body.invitationId,
+            profileExists: null,
+            reconciliationAttempted: false,
+            membershipCreated: false,
+            errorCode: error instanceof AppError ? error.code : "UNEXPECTED_ERROR",
+            result: "failed",
+          },
+          "Client invitation claim failed",
+        );
+        throw error;
+      }
     },
   );
   done();

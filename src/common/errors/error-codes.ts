@@ -14,6 +14,8 @@ export const ErrorCode = {
   Conflict: "CONFLICT",
   WebhookInvalid: "WEBHOOK_INVALID",
   InvitationInvalid: "INVITATION_INVALID",
+  OrganizationNotFound: "ORGANIZATION_NOT_FOUND",
+  InvitationNotFound: "INVITATION_NOT_FOUND",
   InvitationExpired: "INVITATION_EXPIRED",
   InvitationRevoked: "INVITATION_REVOKED",
   InvitationUsed: "INVITATION_USED",

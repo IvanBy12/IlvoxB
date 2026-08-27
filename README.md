@@ -20,6 +20,18 @@ npm install
 npm run dev
 ```
 
+Para recibir eventos Clerk en desarrollo local, instala Clerk CLI, configura en
+Clerk el endpoint que muestra el Relay con los eventos `user.created`,
+`user.updated` y `user.deleted`, y ejecuta en otra terminal:
+
+```powershell
+npm run dev:webhooks
+```
+
+El destino local está fijado en `http://127.0.0.1:3001/webhooks/clerk`. La ruta
+`/api/webhooks/clerk` no existe. Conserva en `CLERK_WEBHOOK_SIGNING_SECRET` el
+Signing Secret del endpoint configurado en Clerk; nunca lo añadas al repositorio.
+
 ## Validacion
 
 ```powershell

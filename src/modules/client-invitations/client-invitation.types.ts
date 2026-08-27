@@ -30,10 +30,16 @@ export interface ClientInvitationCreateResult {
 export interface VerifiedClerkUser {
   readonly clerkUserId: string;
   readonly verifiedEmails: readonly string[];
+  readonly primaryEmail: string | null;
+  readonly firstName: string | null;
+  readonly lastName: string | null;
+  readonly avatarUrl: string | null;
+  readonly syncedAt: Date;
 }
 
 export interface ClerkInvitationGateway {
   findVerifiedUserByEmail(normalizedEmail: string): Promise<VerifiedClerkUser | null>;
+  getVerifiedUser(clerkUserId: string): Promise<VerifiedClerkUser>;
   getVerifiedEmails(clerkUserId: string): Promise<readonly string[]>;
   createInvitation(input: {
     readonly email: string;
@@ -45,15 +51,20 @@ export interface ClerkInvitationGateway {
 
 export type GrantExistingResult =
   | { readonly kind: "granted"; readonly invitation: ClientInvitation }
-  | { readonly kind: "not_found" }
+  | { readonly kind: "organization_not_found" }
   | { readonly kind: "duplicate" }
   | { readonly kind: "already_member" }
   | { readonly kind: "ineligible_profile" };
 
 export type ClaimResult =
-  | { readonly kind: "claimed" | "already_claimed"; readonly invitation: ClientInvitation }
+  | {
+      readonly kind: "claimed" | "already_claimed";
+      readonly invitation: ClientInvitation;
+      readonly profileExisted: boolean;
+      readonly reconciliationAttempted: boolean;
+      readonly membershipCreated: boolean;
+    }
   | { readonly kind: "not_found" }
-  | { readonly kind: "not_synchronized" }
   | { readonly kind: "ineligible_profile" }
   | { readonly kind: "email_mismatch" }
   | { readonly kind: "expired" | "revoked" | "used" };
@@ -61,7 +72,8 @@ export type ClaimResult =
 export type BeginResendResult =
   | { readonly kind: "created"; readonly invitation: ClientInvitation; readonly previousClerkInvitationId: string | null }
   | { readonly kind: "already_replaced"; readonly invitation: ClientInvitation }
-  | { readonly kind: "not_found" }
+  | { readonly kind: "organization_not_found" }
+  | { readonly kind: "invitation_not_found" }
   | { readonly kind: "invalid_state" };
 
 export interface ClientInvitationRepository {
@@ -75,7 +87,7 @@ export interface ClientInvitationRepository {
   cancelDelivery(invitationId: string): Promise<void>;
   grantExisting(
     scope: AuthorizedRepositoryScope,
-    input: { readonly organizationId: string; readonly email: string; readonly normalizedEmail: string; readonly membershipRole: ClientInvitationRole; readonly invitedByUserId: string; readonly clerkUserId: string; readonly expiresAt: Date },
+    input: { readonly organizationId: string; readonly email: string; readonly normalizedEmail: string; readonly membershipRole: ClientInvitationRole; readonly invitedByUserId: string; readonly identity: VerifiedClerkUser; readonly expiresAt: Date },
     audit: AuditContext,
   ): Promise<GrantExistingResult>;
   beginResend(
@@ -91,11 +103,10 @@ export interface ClientInvitationRepository {
     organizationId: string,
     invitationId: string,
     audit: AuditContext,
-  ): Promise<ClientInvitation | "not_found" | "invalid_state">;
+  ): Promise<ClientInvitation | "organization_not_found" | "invitation_not_found" | "invalid_state">;
   claim(
     invitationId: string,
-    clerkUserId: string,
-    verifiedEmails: readonly string[],
+    identity: VerifiedClerkUser,
     audit: AuditContext,
   ): Promise<ClaimResult>;
 }

@@ -287,6 +287,9 @@ export class PostgresUserCatalogRepository implements UserCatalogRepository {
       clauses.push(globalPermission("tasks.manage"));
     } else {
       const project = push(context.projectId);
+      clauses.push(`EXISTS (SELECT 1 FROM user_roles internal_ur
+        JOIN roles internal_r ON internal_r.id = internal_ur.role_id AND internal_r.scope = 'global'
+        WHERE internal_ur.user_id = u.id)`);
       clauses.push(`(EXISTS (SELECT 1 FROM project_members task_pm
           WHERE task_pm.project_id = ${project} AND task_pm.user_id = u.id AND task_pm.status = 'active')
         OR EXISTS (SELECT 1 FROM projects task_p WHERE task_p.id = ${project} AND task_p.lead_user_id = u.id)

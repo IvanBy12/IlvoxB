@@ -56,7 +56,15 @@ export class ClerkWebhookService implements ClerkWebhookProcessor {
       return { status: applied ? "processed" : "obsolete", eventId };
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);
-      await this.recordFailure(eventId, payloadSha256, event).catch(() => undefined);
+      try {
+        await this.recordFailure(eventId, payloadSha256, event);
+      } catch (recordingError) {
+        throw new AggregateError(
+          [error, recordingError],
+          "WEBHOOK_FAILURE_RECORDING_FAILED",
+          { cause: recordingError },
+        );
+      }
       throw error;
     } finally {
       client.release();

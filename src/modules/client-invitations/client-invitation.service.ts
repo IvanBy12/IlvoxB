@@ -24,7 +24,7 @@ export class ClientInvitationService {
 
   async list(actor: ActorContext, organizationId: string) {
     const result = await this.repository.listAuthorized(this.scope(actor, organizationId), organizationId);
-    if (result === null) throw this.notFound();
+    if (result === null) throw this.organizationNotFound();
     return result;
   }
 
@@ -49,10 +49,10 @@ export class ClientInvitationService {
         normalizedEmail,
         membershipRole: input.membershipRole,
         invitedByUserId: actor.localUserId,
-        clerkUserId: existing.clerkUserId,
+        identity: existing,
         expiresAt,
       }, audit);
-      if (result.kind === "not_found") throw this.notFound();
+      if (result.kind === "organization_not_found") throw this.organizationNotFound();
       if (result.kind === "duplicate") {
         throw this.conflict("A pending invitation already exists for this email and organization");
       }
@@ -71,7 +71,7 @@ export class ClientInvitationService {
       invitedByUserId: actor.localUserId,
       expiresAt,
     });
-    if (reserved === null) throw this.notFound();
+    if (reserved === null) throw this.organizationNotFound();
     if (reserved === "duplicate") {
       throw this.conflict("A pending invitation already exists for this email and organization");
     }
@@ -109,7 +109,8 @@ export class ClientInvitationService {
       actor.localUserId,
       this.expiration(),
     );
-    if (result.kind === "not_found") throw this.notFound();
+    if (result.kind === "organization_not_found") throw this.organizationNotFound();
+    if (result.kind === "invitation_not_found") throw this.invitationNotFound();
     if (result.kind === "invalid_state") {
       throw this.conflict("Only pending or expired invitations can be resent");
     }
@@ -147,7 +148,8 @@ export class ClientInvitationService {
       invitationId,
       audit,
     );
-    if (result === "not_found") throw this.notFound();
+    if (result === "organization_not_found") throw this.organizationNotFound();
+    if (result === "invitation_not_found") throw this.invitationNotFound();
     if (result === "invalid_state") {
       throw this.conflict("Only pending invitations can be revoked");
     }
@@ -167,19 +169,18 @@ export class ClientInvitationService {
   }
 
   async claim(clerkUserId: string, invitationId: string, audit: AuditContext) {
-    const verifiedEmails = await this.clerk.getVerifiedEmails(clerkUserId);
-    const result = await this.repository.claim(invitationId, clerkUserId, verifiedEmails, audit);
+    const identity = await this.clerk.getVerifiedUser(clerkUserId);
+    const result = await this.repository.claim(invitationId, identity, audit);
     switch (result.kind) {
       case "claimed":
       case "already_claimed":
-        return { invitation: result.invitation, alreadyClaimed: result.kind === "already_claimed" };
-      case "not_synchronized":
-        throw new AppError({
-          code: ErrorCode.ProfileNotSynchronized,
-          message: "Local profile is not synchronized yet",
-          statusCode: 409,
-          details: { retryable: true },
-        });
+        return {
+          invitation: result.invitation,
+          alreadyClaimed: result.kind === "already_claimed",
+          profileExisted: result.profileExisted,
+          reconciliationAttempted: result.reconciliationAttempted,
+          membershipCreated: result.membershipCreated,
+        };
       case "ineligible_profile":
         throw this.inactiveProfile();
       case "email_mismatch":
@@ -195,7 +196,7 @@ export class ClientInvitationService {
       case "used":
         throw new AppError({ code: ErrorCode.InvitationUsed, message: "The invitation was already used", statusCode: 409 });
       case "not_found":
-        throw new AppError({ code: ErrorCode.InvitationInvalid, message: "The invitation is invalid", statusCode: 404 });
+        throw this.invitationNotFound();
     }
   }
 
@@ -220,8 +221,20 @@ export class ClientInvitationService {
     return url.toString();
   }
 
-  private notFound(): AppError {
-    return new AppError({ code: ErrorCode.NotFound, message: "Organization or invitation not found", statusCode: 404 });
+  private organizationNotFound(): AppError {
+    return new AppError({
+      code: ErrorCode.OrganizationNotFound,
+      message: "Active organization not found",
+      statusCode: 404,
+    });
+  }
+
+  private invitationNotFound(): AppError {
+    return new AppError({
+      code: ErrorCode.InvitationNotFound,
+      message: "Invitation not found",
+      statusCode: 404,
+    });
   }
 
   private forbidden(): AppError {

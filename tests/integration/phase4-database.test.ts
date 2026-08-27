@@ -357,7 +357,7 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 4 PostgreSQL behavior", ()
     expect(await organizations.findAuthorized(scopeA, ORG_B)).toBeNull();
   });
 
-  it("creates and revokes a local membership without deleting identity history", async () => {
+  it("persists every editable membership field and revokes without deleting identity history", async () => {
     const created = await organizations.createMember(
       globalScope,
       ORG_A,
@@ -365,6 +365,42 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 4 PostgreSQL behavior", ()
       { ...audit(), organizationId: ORG_A },
     );
     expect(created).toMatchObject({ userId: USER_CLIENT, roleCode: "client_contact", status: "active" });
+    const updated = await organizations.updateMember(
+      globalScope,
+      ORG_A,
+      USER_CLIENT,
+      {
+        roleCode: "client_manager",
+        status: "active",
+        jobTitle: "Gerente de operaciones",
+        phone: "+57 300 000 0000",
+      },
+      { ...audit(), organizationId: ORG_A },
+    );
+    expect(updated).toMatchObject({
+      userId: USER_CLIENT,
+      roleCode: "client_manager",
+      status: "active",
+      jobTitle: "Gerente de operaciones",
+      phone: "+57 300 000 0000",
+    });
+    expect((await pool.query<{
+      readonly role_code: string;
+      readonly status: string;
+      readonly job_title: string | null;
+      readonly phone: string | null;
+    }>(
+      `SELECT r.code AS role_code, om.status, om.job_title, om.phone
+       FROM organization_memberships om
+       JOIN roles r ON r.id = om.role_id AND r.scope = 'organization'
+       WHERE om.organization_id = $1 AND om.user_id = $2`,
+      [ORG_A, USER_CLIENT],
+    )).rows[0]).toEqual({
+      role_code: "client_manager",
+      status: "active",
+      job_title: "Gerente de operaciones",
+      phone: "+57 300 000 0000",
+    });
     const revoked = await organizations.updateMember(
       globalScope,
       ORG_A,

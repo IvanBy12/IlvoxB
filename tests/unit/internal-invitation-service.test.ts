@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthorizationService } from "../../src/common/auth/authorization.service.js";
 import { InternalInvitationService } from "../../src/modules/internal-invitations/internal-invitation.service.js";
 import type { InternalInvitation, InternalInvitationRepository } from "../../src/modules/internal-invitations/internal-invitation.types.js";
-import type { ClerkInvitationGateway } from "../../src/modules/client-invitations/client-invitation.types.js";
+import type { ClerkInvitationGateway, VerifiedClerkUser } from "../../src/modules/client-invitations/client-invitation.types.js";
 import { USER_A, actor } from "../helpers/actors.js";
 
 const INVITATION_ID = "00000000-0000-4000-8000-000000000821";
@@ -18,6 +18,18 @@ const invitation: InternalInvitation = {
   expiresAt: new Date("2026-09-25T12:00:00.000Z"), acceptedAt: null, revokedAt: null,
   createdAt: now, updatedAt: now,
 };
+
+function clerkIdentity(clerkUserId = "user_new"): VerifiedClerkUser {
+  return {
+    clerkUserId,
+    verifiedEmails: [invitation.email],
+    primaryEmail: invitation.email,
+    firstName: "Person",
+    lastName: null,
+    avatarUrl: null,
+    syncedAt: now,
+  };
+}
 
 function repository(): InternalInvitationRepository {
   return {
@@ -38,6 +50,7 @@ function repository(): InternalInvitationRepository {
 function gateway(): ClerkInvitationGateway {
   return {
     findVerifiedUserByEmail: vi.fn(async () => null),
+    getVerifiedUser: vi.fn(async (clerkUserId: string) => clerkIdentity(clerkUserId)),
     getVerifiedEmails: vi.fn(async () => ["person@example.test"]),
     createInvitation: vi.fn(async () => ({ id: "inv_internal" })),
     revokeInvitation: vi.fn(async () => undefined),
@@ -79,7 +92,7 @@ describe("internal invitation service", () => {
   it("grants a synchronized existing Clerk account without creating another identity", async () => {
     const repo = repository();
     const clerk = gateway();
-    vi.mocked(clerk.findVerifiedUserByEmail).mockResolvedValue({ clerkUserId: "user_existing", verifiedEmails: ["person@example.test"] });
+    vi.mocked(clerk.findVerifiedUserByEmail).mockResolvedValue(clerkIdentity("user_existing"));
     vi.mocked(repo.grantExisting).mockResolvedValue({ kind: "granted", invitation: { ...invitation, status: "accepted", acceptedByUserId: USER_B, acceptedAt: now } });
     const service = new InternalInvitationService(repo, new AuthorizationService(), clerk, "http://127.0.0.1:5173");
     await expect(service.create(manager(), { email: invitation.email, roleCode: role.code }, audit)).resolves.toMatchObject({ outcome: "existing_account_granted" });

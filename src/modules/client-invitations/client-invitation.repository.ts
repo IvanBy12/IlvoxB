@@ -7,6 +7,7 @@ import type {
   ClientInvitation,
   ClientInvitationRepository,
   GrantExistingResult,
+  VerifiedClerkUser,
 } from "./client-invitation.types.js";
 
 interface InvitationRow {
@@ -97,7 +98,8 @@ async function organizationExists(
 ): Promise<boolean> {
   const scoped = scopePredicate(scope, "o", 2);
   const result = await client.query(
-    `SELECT 1 FROM organizations o WHERE o.id = $1 AND ${scoped.sql} FOR UPDATE`,
+    `SELECT 1 FROM organizations o
+     WHERE o.id = $1 AND o.status = 'active' AND ${scoped.sql} FOR UPDATE`,
     [organizationId, ...scoped.values],
   );
   return result.rowCount !== 0;
@@ -158,6 +160,42 @@ async function activateMembership(
          updated_at = now()`,
     [organizationId, userId, selectedRoleId],
   );
+}
+
+async function synchronizeInvitedUser(
+  client: PoolClient,
+  identity: VerifiedClerkUser,
+  fallbackEmail: string,
+): Promise<UserRow> {
+  const synchronized = await client.query<UserRow>(
+    `INSERT INTO app_users (
+       clerk_user_id, primary_email, first_name, last_name, avatar_url, status, last_synced_at
+     ) VALUES ($1,$2,$3,$4,$5,'pending',$6)
+     ON CONFLICT (clerk_user_id) DO UPDATE SET
+       primary_email = EXCLUDED.primary_email,
+       first_name = EXCLUDED.first_name,
+       last_name = EXCLUDED.last_name,
+       avatar_url = EXCLUDED.avatar_url,
+       last_synced_at = EXCLUDED.last_synced_at,
+       updated_at = now()
+     WHERE app_users.last_synced_at IS NULL OR app_users.last_synced_at <= EXCLUDED.last_synced_at
+     RETURNING id,status`,
+    [
+      identity.clerkUserId,
+      identity.primaryEmail ?? fallbackEmail,
+      identity.firstName,
+      identity.lastName,
+      identity.avatarUrl,
+      identity.syncedAt,
+    ],
+  );
+  if (synchronized.rows[0] !== undefined) return synchronized.rows[0];
+  const current = await client.query<UserRow>(
+    "SELECT id,status FROM app_users WHERE clerk_user_id=$1 FOR UPDATE",
+    [identity.clerkUserId],
+  );
+  if (current.rows[0] === undefined) throw new Error("Invited Clerk profile synchronization failed");
+  return current.rows[0];
 }
 
 export class PostgresClientInvitationRepository implements ClientInvitationRepository {
@@ -256,13 +294,13 @@ export class PostgresClientInvitationRepository implements ClientInvitationRepos
       readonly normalizedEmail: string;
       readonly membershipRole: ClientInvitation["membershipRole"];
       readonly invitedByUserId: string;
-      readonly clerkUserId: string;
+      readonly identity: VerifiedClerkUser;
       readonly expiresAt: Date;
     },
     audit: AuditContext,
   ): Promise<GrantExistingResult> {
     return transaction(this.pool, async (client) => {
-      if (!await organizationExists(client, scope, input.organizationId)) return { kind: "not_found" };
+      if (!await organizationExists(client, scope, input.organizationId)) return { kind: "organization_not_found" };
       await expirePending(client, input.organizationId);
       const pending = await client.query(
         `SELECT 1 FROM organization_invitations
@@ -271,14 +309,7 @@ export class PostgresClientInvitationRepository implements ClientInvitationRepos
         [input.organizationId, input.normalizedEmail],
       );
       if (pending.rowCount !== 0) return { kind: "duplicate" };
-      const userResult = await client.query<UserRow>(
-        `SELECT id, status FROM app_users
-         WHERE clerk_user_id = $1
-         FOR UPDATE`,
-        [input.clerkUserId],
-      );
-      const user = userResult.rows[0];
-      if (user === undefined) return { kind: "not_found" };
+      const user = await synchronizeInvitedUser(client, input.identity, input.normalizedEmail);
       if (user.status === "blocked" || user.status === "deleted") return { kind: "ineligible_profile" };
       const membership = await client.query(
         `SELECT 1 FROM organization_memberships
@@ -320,10 +351,10 @@ export class PostgresClientInvitationRepository implements ClientInvitationRepos
     expiresAt: Date,
   ): Promise<BeginResendResult> {
     return transaction(this.pool, async (client) => {
-      if (!await organizationExists(client, scope, organizationId)) return { kind: "not_found" };
+      if (!await organizationExists(client, scope, organizationId)) return { kind: "organization_not_found" };
       await expirePending(client, organizationId);
       const source = await findInvitation(client, invitationId, true);
-      if (source === null || source.organizationId !== organizationId) return { kind: "not_found" };
+      if (source === null || source.organizationId !== organizationId) return { kind: "invitation_not_found" };
       if (source.status === "accepted") return { kind: "invalid_state" };
       if (source.status === "revoked") {
         const current = await client.query<InvitationRow>(
@@ -397,12 +428,12 @@ export class PostgresClientInvitationRepository implements ClientInvitationRepos
     organizationId: string,
     invitationId: string,
     audit: AuditContext,
-  ): Promise<ClientInvitation | "not_found" | "invalid_state"> {
+  ): Promise<ClientInvitation | "organization_not_found" | "invitation_not_found" | "invalid_state"> {
     return transaction(this.pool, async (client) => {
-      if (!await organizationExists(client, scope, organizationId)) return "not_found";
+      if (!await organizationExists(client, scope, organizationId)) return "organization_not_found";
       await expirePending(client, organizationId);
       const invitation = await findInvitation(client, invitationId, true);
-      if (invitation === null || invitation.organizationId !== organizationId) return "not_found";
+      if (invitation === null || invitation.organizationId !== organizationId) return "invitation_not_found";
       if (invitation.status === "revoked") return invitation;
       if (invitation.status !== "pending") return "invalid_state";
       await client.query(
@@ -427,8 +458,7 @@ export class PostgresClientInvitationRepository implements ClientInvitationRepos
 
   claim(
     invitationId: string,
-    clerkUserId: string,
-    verifiedEmails: readonly string[],
+    identity: VerifiedClerkUser,
     audit: AuditContext,
   ): Promise<ClaimResult> {
     return transaction(this.pool, async (client) => {
@@ -442,19 +472,34 @@ export class PostgresClientInvitationRepository implements ClientInvitationRepos
           "SELECT clerk_user_id FROM app_users WHERE id = $1",
           [invitation.acceptedByUserId],
         );
-        return accepted.rows[0]?.clerk_user_id === clerkUserId
-          ? { kind: "already_claimed", invitation }
+        return accepted.rows[0]?.clerk_user_id === identity.clerkUserId
+          ? {
+              kind: "already_claimed",
+              invitation,
+              profileExisted: true,
+              reconciliationAttempted: false,
+              membershipCreated: false,
+            }
           : { kind: "used" };
       }
-      const normalizedEmails = new Set(verifiedEmails.map((email) => email.trim().toLowerCase()));
+      const normalizedEmails = new Set(identity.verifiedEmails.map((email) => email.trim().toLowerCase()));
       if (!normalizedEmails.has(invitation.email.trim().toLowerCase())) return { kind: "email_mismatch" };
       const userResult = await client.query<UserRow>(
         "SELECT id, status FROM app_users WHERE clerk_user_id = $1 FOR UPDATE",
-        [clerkUserId],
+        [identity.clerkUserId],
       );
-      const user = userResult.rows[0];
-      if (user === undefined) return { kind: "not_synchronized" };
+      const profileExisted = userResult.rows[0] !== undefined;
+      const user = await synchronizeInvitedUser(
+        client,
+        identity,
+        invitation.email.trim().toLowerCase(),
+      );
       if (user.status === "blocked" || user.status === "deleted") return { kind: "ineligible_profile" };
+      const existingMembership = await client.query(
+        `SELECT 1 FROM organization_memberships
+         WHERE organization_id=$1 AND user_id=$2 FOR UPDATE`,
+        [invitation.organizationId, user.id],
+      );
       await activateMembership(client, invitation.organizationId, user.id, invitation.membershipRole);
       if (user.status === "pending") {
         await client.query("UPDATE app_users SET status = 'active', updated_at = now() WHERE id = $1", [user.id]);
@@ -477,7 +522,13 @@ export class PostgresClientInvitationRepository implements ClientInvitationRepos
         oldValues: { status: "pending" },
         newValues: { status: "accepted", membershipRole: invitation.membershipRole },
       });
-      return { kind: "claimed", invitation: claimed };
+      return {
+        kind: "claimed",
+        invitation: claimed,
+        profileExisted,
+        reconciliationAttempted: !profileExisted,
+        membershipCreated: existingMembership.rowCount === 0,
+      };
     });
   }
 }

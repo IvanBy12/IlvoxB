@@ -37,6 +37,17 @@ export interface TicketRecord {
   readonly updatedAt: Date;
 }
 
+export interface TicketUserSummary {
+  readonly id: string;
+  readonly firstName: string | null;
+  readonly lastName: string | null;
+  readonly displayName: string;
+}
+
+export interface TicketDetailRecord extends TicketRecord {
+  readonly requester: TicketUserSummary;
+}
+
 export interface TicketCreateInput {
   readonly organizationId?: string;
   readonly projectId?: string;
@@ -74,6 +85,7 @@ export interface TicketCommentRecord {
   readonly ticketId: string;
   readonly organizationId: string | null;
   readonly authorUserId: string;
+  readonly author: TicketUserSummary;
   readonly visibility: TicketCommentVisibility;
   readonly content: string;
   readonly createdAt: Date;
@@ -90,7 +102,7 @@ export type TicketWriteResult<T> =
 
 export interface TicketRepository {
   listAuthorized(scope: AuthorizedRepositoryScope, input: TicketListInput): Promise<PaginatedResult<TicketRecord>>;
-  findAuthorized(scope: AuthorizedRepositoryScope, ticketId: string): Promise<TicketRecord | null>;
+  findAuthorized(scope: AuthorizedRepositoryScope, ticketId: string): Promise<TicketDetailRecord | null>;
   create(
     scope: AuthorizedRepositoryScope,
     input: TicketCreateInput,

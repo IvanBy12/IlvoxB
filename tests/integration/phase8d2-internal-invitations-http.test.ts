@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AuthenticationProvider } from "../../src/plugins/clerk.js";
 import type { IdentityRepository } from "../../src/modules/identity/identity.types.js";
-import type { ClerkInvitationGateway } from "../../src/modules/client-invitations/client-invitation.types.js";
+import type { ClerkInvitationGateway, VerifiedClerkUser } from "../../src/modules/client-invitations/client-invitation.types.js";
 import type { InternalInvitation, InternalInvitationRepository } from "../../src/modules/internal-invitations/internal-invitation.types.js";
 import { buildTestApp } from "../helpers/build-test-app.js";
 import { USER_A, actor } from "../helpers/actors.js";
@@ -18,6 +18,15 @@ const invitation: InternalInvitation = {
   expiresAt: new Date("2026-09-25T12:00:00.000Z"), acceptedAt: null, revokedAt: null,
   createdAt: now, updatedAt: now,
 };
+const clerkIdentity = (clerkUserId: string): VerifiedClerkUser => ({
+  clerkUserId,
+  verifiedEmails: [invitation.email],
+  primaryEmail: invitation.email,
+  firstName: "Person",
+  lastName: null,
+  avatarUrl: null,
+  syncedAt: now,
+});
 const authenticated: AuthenticationProvider = { authenticate: () => Promise.resolve({ clerkUserId: "clerk_actor" }) };
 
 function identity(internal = true, withPermission = true): IdentityRepository {
@@ -46,6 +55,7 @@ function repository(): InternalInvitationRepository {
 function gateway(): ClerkInvitationGateway {
   return {
     findVerifiedUserByEmail: vi.fn(() => Promise.resolve(null)),
+    getVerifiedUser: vi.fn((clerkUserId: string) => Promise.resolve(clerkIdentity(clerkUserId))),
     getVerifiedEmails: vi.fn(() => Promise.resolve([invitation.email])),
     createInvitation: vi.fn(() => Promise.resolve({ id: "inv_new" })),
     revokeInvitation: vi.fn(() => Promise.resolve()),
