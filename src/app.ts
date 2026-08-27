@@ -63,6 +63,10 @@ import type { UserCatalogRepository } from "./modules/users/user-catalog.types.j
 import { PostgresUserCatalogRepository } from "./modules/users/user-catalog.repository.js";
 import { UserCatalogService } from "./modules/users/user-catalog.service.js";
 import { userCatalogRoutes } from "./modules/users/user-catalog.routes.js";
+import type { InternalInvitationRepository } from "./modules/internal-invitations/internal-invitation.types.js";
+import { PostgresInternalInvitationRepository } from "./modules/internal-invitations/internal-invitation.repository.js";
+import { InternalInvitationService } from "./modules/internal-invitations/internal-invitation.service.js";
+import { internalInvitationRoutes } from "./modules/internal-invitations/internal-invitation.routes.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -82,6 +86,8 @@ export interface BuildAppOptions {
   readonly clerkInvitationGateway?: ClerkInvitationGateway;
   readonly diagnosticRepository?: DiagnosticRepository;
   readonly userCatalogRepository?: UserCatalogRepository;
+  readonly internalInvitationRepository?: InternalInvitationRepository;
+  readonly internalClerkInvitationGateway?: ClerkInvitationGateway;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -208,6 +214,25 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(clientInvitationRoutes, {
       prefix: "/api/v1",
       service: new ClientInvitationService(
+        repository,
+        new AuthorizationService(),
+        clerk,
+        config.CLIENT_APP_URL ?? config.CORS_ORIGINS[0]!,
+      ),
+    });
+  }
+
+  const hasInternalInvitationDependencies =
+    (options.internalInvitationRepository !== undefined && options.internalClerkInvitationGateway !== undefined) ||
+    (app.databasePool !== null && config.CLERK_SECRET_KEY !== undefined);
+  if (hasInternalInvitationDependencies) {
+    const repository = options.internalInvitationRepository ??
+      new PostgresInternalInvitationRepository(app.databasePool!);
+    const clerk = options.internalClerkInvitationGateway ??
+      new OfficialClerkInvitationGateway(config.CLERK_SECRET_KEY!);
+    await app.register(internalInvitationRoutes, {
+      prefix: "/api/v1",
+      service: new InternalInvitationService(
         repository,
         new AuthorizationService(),
         clerk,

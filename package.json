@@ -51,7 +51,9 @@
     "openapi:phase6": "node scripts/generate-phase6-openapi.mjs",
     "openapi:phase8c": "node scripts/generate-phase8c-openapi.mjs",
     "openapi:phase8d1": "node scripts/generate-phase8d1-openapi.mjs",
-    "smoke:phase8d1:user-catalog": "tsx scripts/smoke-phase8d1-user-catalog.ts"
+    "smoke:phase8d1:user-catalog": "tsx scripts/smoke-phase8d1-user-catalog.ts",
+    "openapi:phase8d2": "node scripts/generate-phase8d2-openapi.mjs",
+    "smoke:phase8d2:internal-invitations": "tsx scripts/smoke-phase8d2-internal-invitations.ts"
   },
   "dependencies": {
     "@clerk/backend": "^3.12.0",

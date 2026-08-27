@@ -16,7 +16,7 @@ import { auditEvents } from "./audit.js";
 import { diagnosticOptionNeedPoints, diagnosticOptions, diagnosticQuestions, diagnosticRuleSets, diagnosticRuns } from "./diagnostics.js";
 import { files } from "./files.js";
 import { appUsers, identityWebhookEvents } from "./identity.js";
-import { organizationInvitations } from "./invitations.js";
+import { internalUserInvitations, organizationInvitations } from "./invitations.js";
 import { leads } from "./leads.js";
 import { organizationMemberships, organizations } from "./organizations.js";
 import { deliverables, projectMembers, projectMilestones, projects } from "./projects.js";
@@ -36,6 +36,7 @@ export const schemaTables = [
   organizations,
   organizationMemberships,
   organizationInvitations,
+  internalUserInvitations,
   services,
   serviceNeeds,
   serviceNeedLinks,

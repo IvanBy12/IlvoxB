@@ -77,14 +77,15 @@ describe("Accumulated OpenAPI through Phase 8D.1", () => {
       Object.keys(item)
         .filter((method) => methods.has(method))
         .map((method) => `${method.toUpperCase()} ${path}`));
-    expect(document.info.version).toBe("0.8.3");
-    expect(operations).toHaveLength(77);
+    expect(document.info.version).toBe("0.8.4");
+    expect(operations).toHaveLength(83);
     expect(phase5Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase6Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase8aOperations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase8bOperations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase8cOperations.every((operation) => operations.includes(operation))).toBe(true);
     expect(["GET /users", "GET /users/{userId}", "GET /users/eligible"].every((operation) => operations.includes(operation))).toBe(true);
+    expect(["GET /internal-roles", "GET /internal-invitations", "POST /internal-invitations", "POST /internal-invitations/{invitationId}/resend", "POST /internal-invitations/{invitationId}/revoke", "POST /internal-invitations/claim"].every((operation) => operations.includes(operation))).toBe(true);
     expect(phase5Operations).toHaveLength(24);
   });
 

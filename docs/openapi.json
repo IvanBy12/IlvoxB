@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ILVOX Backend API",
-    "version": "0.8.3",
-    "description": "Fase 8D.1: catálogo administrativo de usuarios y elegibilidad contextual calculada exclusivamente por PostgreSQL/RBAC."
+    "version": "0.8.4",
+    "description": "Fase 8D.2: invitaciones privadas de personal interno, roles asignables y claim separado del acceso cliente."
   },
   "servers": [
     {
@@ -55,6 +55,9 @@
     },
     {
       "name": "Users"
+    },
+    {
+      "name": "Internal Invitations"
     }
   ],
   "paths": {
@@ -3899,6 +3902,263 @@
           }
         }
       }
+    },
+    "/internal-roles": {
+      "get": {
+        "tags": [
+          "Internal Invitations"
+        ],
+        "summary": "List internal roles assignable by the current actor",
+        "description": "Returns global internal roles whose effective permissions do not exceed the inviter's capabilities. super_admin and client roles are excluded.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "users.manage",
+        "x-audience": "internal",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/internal-invitations": {
+      "get": {
+        "tags": [
+          "Internal Invitations"
+        ],
+        "summary": "List internal staff invitations",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "users.manage",
+        "x-audience": "internal",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Internal Invitations"
+        ],
+        "summary": "Invite one internal collaborator",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "users.manage",
+        "x-audience": "internal",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InternalInvitationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "201": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/internal-invitations/{invitationId}/resend": {
+      "post": {
+        "tags": [
+          "Internal Invitations"
+        ],
+        "summary": "Replace and resend an internal invitation",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "users.manage",
+        "x-audience": "internal",
+        "x-rate-limit": "5 per hour",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/internal-invitations/{invitationId}/revoke": {
+      "post": {
+        "tags": [
+          "Internal Invitations"
+        ],
+        "summary": "Revoke an internal invitation idempotently",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-permission": "users.manage",
+        "x-audience": "internal",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/internal-invitations/claim": {
+      "post": {
+        "tags": [
+          "Internal Invitations"
+        ],
+        "summary": "Claim an internal invitation with the authenticated Clerk identity",
+        "description": "Accepts only the opaque local invitation UUID. The role is read from PostgreSQL. This endpoint never creates an organization membership.",
+        "security": [
+          {
+            "clerkSession": []
+          }
+        ],
+        "x-rate-limit": "10 per minute",
+        "x-success-audience": "internal",
+        "x-separated-from": "/client-invitations/claim",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InternalInvitationClaim"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5558,6 +5818,144 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "AssignableInternalRole": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "name",
+          "description"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "InternalInvitationStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "accepted",
+          "expired",
+          "revoked"
+        ]
+      },
+      "InternalInvitation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "email",
+          "roleCode",
+          "roleName",
+          "status",
+          "invitedByUserId",
+          "acceptedByUserId",
+          "expiresAt",
+          "acceptedAt",
+          "revokedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "roleCode": {
+            "type": "string"
+          },
+          "roleName": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InternalInvitationStatus"
+          },
+          "invitedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "acceptedByUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "acceptedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "InternalInvitationCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "roleCode"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "roleCode": {
+            "type": "string",
+            "maxLength": 80
+          }
+        }
+      },
+      "InternalInvitationClaim": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "invitationId"
+        ],
+        "properties": {
+          "invitationId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       }

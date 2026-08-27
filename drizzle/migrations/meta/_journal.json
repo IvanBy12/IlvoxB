@@ -85,6 +85,13 @@
       "when": 1787683729637,
       "tag": "0011_phase8c-diagnostic-engine",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787768868305,
+      "tag": "0012_phase8d2-internal-invitations",
+      "breakpoints": true
     }
   ]
 }
