@@ -74,6 +74,12 @@ import { R2FileStorage } from "./modules/files/file-storage.js";
 import { FilePolicy } from "./modules/files/file-policy.js";
 import { FileService } from "./modules/files/file.service.js";
 import { fileRoutes } from "./modules/files/file.routes.js";
+import type { EmailProvider } from "./modules/email-notifications/email-provider.js";
+import { DisabledEmailProvider } from "./modules/email-notifications/disabled-email.provider.js";
+import { ResendEmailProvider } from "./modules/email-notifications/resend-email.provider.js";
+import type { EmailNotificationRepository } from "./modules/email-notifications/email-notification.repository.js";
+import { PostgresEmailNotificationRepository } from "./modules/email-notifications/email-notification.repository.js";
+import { EmailNotificationDispatcher } from "./modules/email-notifications/email-notification.dispatcher.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -97,6 +103,8 @@ export interface BuildAppOptions {
   readonly internalClerkInvitationGateway?: ClerkInvitationGateway;
   readonly fileRepository?: FileRepositoryPort;
   readonly fileStorage?: FileStorage;
+  readonly emailProvider?: EmailProvider;
+  readonly emailNotificationRepository?: EmailNotificationRepository;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -176,9 +184,31 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     const authorization = new AuthorizationService();
     const serviceCatalogRepository = options.serviceCatalogRepository ??
       new PostgresServiceCatalogRepository(app.databasePool!);
-    const leadRepository = options.leadRepository ?? new PostgresLeadRepository(app.databasePool!);
+    const leadNotificationConfig = config.NOTIFICATION_EMAIL_TO.length === 0
+      ? undefined
+      : { recipients: config.NOTIFICATION_EMAIL_TO, provider: config.EMAIL_PROVIDER };
+    const leadRepository = options.leadRepository ?? new PostgresLeadRepository(
+      app.databasePool!,
+      leadNotificationConfig,
+    );
     const organizationRepository = options.organizationRepository ??
       new PostgresOrganizationRepository(app.databasePool!);
+    let notificationDispatcher: EmailNotificationDispatcher | undefined;
+    if (app.databasePool !== null && config.EMAIL_FROM !== undefined && config.NOTIFICATION_EMAIL_TO.length > 0) {
+      const emailProvider = options.emailProvider ?? (config.EMAIL_PROVIDER === "resend"
+        ? new ResendEmailProvider(config.RESEND_API_KEY!)
+        : new DisabledEmailProvider());
+      notificationDispatcher = new EmailNotificationDispatcher(
+        options.emailNotificationRepository ?? new PostgresEmailNotificationRepository(app.databasePool),
+        emailProvider,
+        { from: config.EMAIL_FROM, frontendAppUrl: config.CLIENT_APP_URL ?? config.CORS_ORIGINS[0]! },
+        app.log,
+      );
+      if (config.EMAIL_PROVIDER === "resend" || options.emailProvider !== undefined) {
+        app.addHook("onReady", () => { notificationDispatcher?.start(); });
+        app.addHook("onClose", () => { notificationDispatcher?.stop(); });
+      }
+    }
 
     await app.register(serviceCatalogRoutes, {
       prefix: "/api/v1",
@@ -186,7 +216,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     });
     await app.register(leadRoutes, {
       prefix: "/api/v1",
-      service: new LeadService(leadRepository, authorization),
+      service: new LeadService(leadRepository, authorization, notificationDispatcher),
     });
     await app.register(organizationRoutes, {
       prefix: "/api/v1",

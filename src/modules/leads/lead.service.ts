@@ -11,11 +11,13 @@ import type {
   LeadRepository,
   PublicLeadInput,
 } from "./lead.types.js";
+import type { NotificationDispatchTrigger } from "../email-notifications/email-notification.dispatcher.js";
 
 export class LeadService {
   constructor(
     private readonly repository: LeadRepository,
     private readonly authorization: AuthorizationService,
+    private readonly notificationDispatch?: NotificationDispatchTrigger,
   ) {}
 
   async createPublic(input: PublicLeadInput, audit: AuditContext) {
@@ -27,7 +29,7 @@ export class LeadService {
       });
     }
     try {
-      return await this.repository.createPublic({
+      const lead = await this.repository.createPublic({
         ...input,
         fullName: input.fullName.trim(),
         email: input.email.trim().toLowerCase(),
@@ -35,6 +37,8 @@ export class LeadService {
         ...(input.companyName === undefined ? {} : { companyName: input.companyName.trim() }),
         ...(input.phone === undefined ? {} : { phone: input.phone.trim() }),
       }, audit);
+      this.notificationDispatch?.trigger();
+      return lead;
     } catch (error) {
       if ((error as { readonly code?: string }).code === "ILVOX_SERVICE_NOT_FOUND") {
         throw this.notFound("Service");

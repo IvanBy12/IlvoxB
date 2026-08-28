@@ -1,5 +1,6 @@
 export * from "./audit.js";
 export * from "./diagnostics.js";
+export * from "./email-notifications.js";
 export * from "./files.js";
 export * from "./identity.js";
 export * from "./invitations.js";
@@ -14,6 +15,7 @@ export * from "./tickets.js";
 
 import { auditEvents } from "./audit.js";
 import { diagnosticOptionNeedPoints, diagnosticOptions, diagnosticQuestions, diagnosticRuleSets, diagnosticRuns } from "./diagnostics.js";
+import { emailNotifications } from "./email-notifications.js";
 import { files } from "./files.js";
 import { appUsers, identityWebhookEvents } from "./identity.js";
 import { internalUserInvitations, organizationInvitations } from "./invitations.js";
@@ -54,5 +56,6 @@ export const schemaTables = [
   ticketComments,
   tasks,
   files,
+  emailNotifications,
   auditEvents,
 ] as const;

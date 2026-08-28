@@ -32,6 +32,27 @@ const optionalCsvUrls = z.string().default("").transform((value, context) => {
 const optionalCsv = z.string().default("").transform((value) =>
   value.split(",").map((item) => item.trim()).filter(Boolean));
 
+const optionalCsvEmails = z.string().default("").transform((value, context) => {
+  const values = value.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+  for (const item of values) {
+    if (!z.email().safeParse(item).success) {
+      context.addIssue({ code: "custom", message: `Invalid email: ${item}` });
+    }
+  }
+  return [...new Set(values)];
+});
+
+const emailFrom = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().max(320).refine(
+    (value) => !/[\r\n]/u.test(value) && (
+      z.email().safeParse(value).success ||
+      /^[^<>]+<[^<>]+>$/u.test(value) && z.email().safeParse(value.slice(value.lastIndexOf("<") + 1, -1).trim()).success
+    ),
+    "EMAIL_FROM must be an email or a display name followed by <email>",
+  ).optional(),
+);
+
 const booleanString = z
   .enum(["true", "false", "1", "0"])
   .default("false")
@@ -71,6 +92,10 @@ const envSchema = z
     CLERK_AUTHORIZED_PARTIES: optionalCsvUrls,
     CLERK_AUDIENCE: optionalCsv,
     CLIENT_APP_URL: optionalUrl,
+    EMAIL_PROVIDER: z.enum(["disabled", "resend"]).default("disabled"),
+    RESEND_API_KEY: optionalString,
+    EMAIL_FROM: emailFrom,
+    NOTIFICATION_EMAIL_TO: optionalCsvEmails,
     FILE_STORAGE_PROVIDER: z.enum(["disabled", "r2"]).default("disabled"),
     R2_ENDPOINT: optionalUrl,
     R2_REGION: z.string().min(1).default("auto"),
@@ -107,6 +132,17 @@ const envSchema = z
     }
     if (env.CLERK_WEBHOOKS_ENABLED && env.DATABASE_URL === undefined) {
       context.addIssue({ code: "custom", path: ["DATABASE_URL"], message: "DATABASE_URL is required when Clerk webhooks are enabled" });
+    }
+    if (env.EMAIL_PROVIDER === "resend") {
+      for (const [key, value] of [
+        ["RESEND_API_KEY", env.RESEND_API_KEY],
+        ["EMAIL_FROM", env.EMAIL_FROM],
+      ] as const) {
+        if (value === undefined) context.addIssue({ code: "custom", path: [key], message: `${key} is required when Resend email is enabled` });
+      }
+      if (env.NOTIFICATION_EMAIL_TO.length === 0) {
+        context.addIssue({ code: "custom", path: ["NOTIFICATION_EMAIL_TO"], message: "At least one notification recipient is required when Resend email is enabled" });
+      }
     }
     if (env.FILE_STORAGE_PROVIDER === "r2") {
       for (const [key, value] of [

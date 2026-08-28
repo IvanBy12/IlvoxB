@@ -111,7 +111,13 @@ function normalizeTaxId(value: string): string {
 }
 
 export class PostgresLeadRepository implements LeadRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(
+    private readonly pool: Pool,
+    private readonly leadCreatedNotification?: {
+      readonly recipients: readonly string[];
+      readonly provider: "disabled" | "resend";
+    },
+  ) {}
 
   createPublic(input: PublicLeadInput, audit: AuditContext): Promise<LeadRecord> {
     return withTransaction(this.pool, async (client) => {
@@ -164,6 +170,23 @@ export class PostgresLeadRepository implements LeadRepository {
         if (claimed.rowCount !== 1) {
           throw Object.assign(new Error("diagnostic_claimed"), { code: "ILVOX_DIAGNOSTIC_CLAIMED" });
         }
+      }
+      if (this.leadCreatedNotification !== undefined && this.leadCreatedNotification.recipients.length > 0) {
+        const label = (input.companyName ?? input.fullName)
+          .replaceAll(/[\r\n]+/gu, " ")
+          .trim();
+        await client.query(
+          `INSERT INTO email_notifications (
+             lead_id, event_type, recipients, subject, status, attempts, provider
+           ) VALUES ($1, 'lead.created', $2::text[], $3, 'pending', 0, $4)
+           ON CONFLICT (event_type, lead_id) DO NOTHING`,
+          [
+            leadId,
+            [...this.leadCreatedNotification.recipients],
+            `Nuevo prospecto en ILVOX — ${label}`,
+            this.leadCreatedNotification.provider,
+          ],
+        );
       }
       await insertAuditEvent(client, {
         ...audit,
