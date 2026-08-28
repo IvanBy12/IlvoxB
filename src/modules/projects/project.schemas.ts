@@ -1,5 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { DELIVERABLE_STATUSES, MILESTONE_STATUSES, PROJECT_PRIORITIES } from "./project.types.js";
+import { DELIVERABLE_PARTIES, DELIVERABLE_STATUSES, MILESTONE_STATUSES, PROJECT_PRIORITIES } from "./project.types.js";
 import { PROJECT_STATUSES } from "../../common/state-machines/project-transitions.js";
 
 const literalUnion = <T extends readonly string[]>(values: T) =>
@@ -88,11 +88,15 @@ export const DeliverableCreateBodySchema = Type.Object({
   name: Type.String({ minLength: 1, maxLength: 200 }),
   description: Type.Optional(Type.String({ maxLength: 10000 })),
   milestoneId: Type.Optional(Type.String({ format: "uuid" })),
+  deliveryParty: Type.Optional(literalUnion(DELIVERABLE_PARTIES)),
+  dueDate: Type.Optional(Type.String({ format: "date" })),
 }, { additionalProperties: false });
 export const DeliverablePatchBodySchema = Type.Partial(Type.Object({
   name: Type.String({ minLength: 1, maxLength: 200 }),
   description: NullableText,
   milestoneId: Type.Union([Type.String({ format: "uuid" }), Type.Null()]),
+  deliveryParty: literalUnion(DELIVERABLE_PARTIES),
+  dueDate: Type.Union([Type.String({ format: "date" }), Type.Null()]),
   status: literalUnion(DELIVERABLE_STATUSES),
   expectedUpdatedAt: Type.String({ format: "date-time" }),
 }, { additionalProperties: false }), { minProperties: 1 });

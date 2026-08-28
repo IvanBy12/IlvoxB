@@ -67,6 +67,13 @@ import type { InternalInvitationRepository } from "./modules/internal-invitation
 import { PostgresInternalInvitationRepository } from "./modules/internal-invitations/internal-invitation.repository.js";
 import { InternalInvitationService } from "./modules/internal-invitations/internal-invitation.service.js";
 import { internalInvitationRoutes } from "./modules/internal-invitations/internal-invitation.routes.js";
+import type { FileRepositoryPort } from "./modules/files/file.types.js";
+import { FileRepository } from "./modules/files/file.repository.js";
+import type { FileStorage } from "./modules/files/file-storage.js";
+import { R2FileStorage } from "./modules/files/file-storage.js";
+import { FilePolicy } from "./modules/files/file-policy.js";
+import { FileService } from "./modules/files/file.service.js";
+import { fileRoutes } from "./modules/files/file.routes.js";
 
 export interface BuildAppOptions {
   readonly env?: NodeJS.ProcessEnv;
@@ -88,6 +95,8 @@ export interface BuildAppOptions {
   readonly userCatalogRepository?: UserCatalogRepository;
   readonly internalInvitationRepository?: InternalInvitationRepository;
   readonly internalClerkInvitationGateway?: ClerkInvitationGateway;
+  readonly fileRepository?: FileRepositoryPort;
+  readonly fileStorage?: FileStorage;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -266,6 +275,20 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       prefix: "/api/v1",
       service: new TicketService(ticketRepository, authorization),
     });
+  }
+
+  const configuredStorage = options.fileStorage ?? (config.FILE_STORAGE_PROVIDER === "r2"
+    ? new R2FileStorage({ endpoint: config.R2_ENDPOINT!, region: config.R2_REGION, bucket: config.R2_BUCKET!,
+        accessKeyId: config.R2_ACCESS_KEY_ID!, secretAccessKey: config.R2_SECRET_ACCESS_KEY! })
+    : undefined);
+  const hasFileDependencies = configuredStorage !== undefined &&
+    (app.databasePool !== null || options.fileRepository !== undefined);
+  if (hasFileDependencies) {
+    const repository = options.fileRepository ?? new FileRepository(app.databasePool!);
+    await app.register(fileRoutes, { prefix: "/api/v1", service: new FileService(repository, configuredStorage,
+      new AuthorizationService(), new FilePolicy({ documentBytes: config.FILE_DOCUMENT_MAX_BYTES,
+        imageBytes: config.FILE_IMAGE_MAX_BYTES, zipBytes: config.FILE_ZIP_MAX_BYTES }),
+      { uploadTtlSeconds: config.FILE_UPLOAD_URL_TTL_SECONDS, downloadTtlSeconds: config.FILE_DOWNLOAD_URL_TTL_SECONDS }) });
   }
 
   return app;

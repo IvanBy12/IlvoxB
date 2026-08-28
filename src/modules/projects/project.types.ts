@@ -13,6 +13,8 @@ export const MILESTONE_STATUSES = ["pending", "in_progress", "completed"] as con
 export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number];
 export const DELIVERABLE_STATUSES = ["pending", "in_review", "delivered", "approved", "rejected"] as const;
 export type DeliverableStatus = (typeof DELIVERABLE_STATUSES)[number];
+export const DELIVERABLE_PARTIES = ["internal", "client"] as const;
+export type DeliverableParty = (typeof DELIVERABLE_PARTIES)[number];
 
 export interface ProjectRecord {
   readonly id: string;
@@ -113,6 +115,8 @@ export interface DeliverableRecord {
   readonly milestoneId: string | null;
   readonly name: string;
   readonly description: string | null;
+  readonly deliveryParty: DeliverableParty;
+  readonly dueDate: string | null;
   readonly status: DeliverableStatus;
   readonly approvedByUserId: string | null;
   readonly approvedAt: Date | null;
@@ -124,12 +128,16 @@ export interface DeliverableCreate {
   readonly name: string;
   readonly description?: string;
   readonly milestoneId?: string;
+  readonly deliveryParty?: DeliverableParty;
+  readonly dueDate?: string;
 }
 
 export interface DeliverablePatch {
   readonly name?: string;
   readonly description?: string | null;
   readonly milestoneId?: string | null;
+  readonly deliveryParty?: DeliverableParty;
+  readonly dueDate?: string | null;
   readonly status?: DeliverableStatus;
   readonly expectedUpdatedAt?: Date;
 }

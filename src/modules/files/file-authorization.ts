@@ -1,4 +1,7 @@
 import type { ActorContext } from "../../common/auth/authorization.types.js";
+import { defaultFilePolicy, type FileUploadMetadata } from "./file-policy.js";
+
+export type { FileUploadMetadata } from "./file-policy.js";
 
 export type FileAudience = "internal" | "organization";
 export type FileStatus = "pending_upload" | "pending_scan" | "active" | "quarantined" | "deleted";
@@ -11,24 +14,11 @@ export interface FileAccessContext {
   readonly direct: boolean;
 }
 
-export interface FileUploadMetadata {
-  readonly originalName: string;
-  readonly mimeType: string;
-  readonly sizeBytes: number;
-}
-
 export interface FilePolicyDecision {
   readonly allowed: boolean;
   readonly reason: "ALLOW" | "PERMISSION" | "ORGANIZATION" | "AUDIENCE" | "RESOURCE" | "STATUS" | "METADATA";
   readonly auditRequired: boolean;
 }
-
-const allowedMimeTypes = new Set([
-  "application/pdf", "image/jpeg", "image/png", "text/plain",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-]);
-const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png", "txt", "docx", "xlsx"]);
 
 function hasPermission(actor: ActorContext, code: string): boolean {
   return actor.permissions.some((permission) => permission.code === code);
@@ -44,15 +34,7 @@ function denied(reason: FilePolicyDecision["reason"]): FilePolicyDecision {
 }
 
 export function validateFileUploadMetadata(metadata: FileUploadMetadata): FilePolicyDecision {
-  if (metadata.sizeBytes <= 0 || metadata.sizeBytes > 25 * 1024 * 1024) return denied("METADATA");
-  const extension = metadata.originalName.split(".").pop()?.toLowerCase();
-  if (extension === undefined || !allowedExtensions.has(extension) || !allowedMimeTypes.has(metadata.mimeType)) {
-    return denied("METADATA");
-  }
-  if (metadata.originalName.includes("/") || metadata.originalName.includes("\\") || metadata.originalName.includes("\0")) {
-    return denied("METADATA");
-  }
-  return allowed();
+  return defaultFilePolicy.validateMetadata(metadata).allowed ? allowed() : denied("METADATA");
 }
 
 export function authorizeFileRead(actor: ActorContext, file: FileAccessContext): FilePolicyDecision {

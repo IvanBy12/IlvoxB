@@ -209,6 +209,13 @@ export const deliverables = pgTable(
     milestoneId: uuid("milestone_id"),
     name: varchar("name", { length: 200 }).notNull(),
     description: text("description"),
+    deliveryParty: varchar("delivery_party", {
+      length: 20,
+      enum: ["internal", "client"],
+    })
+      .notNull()
+      .default("internal"),
+    dueDate: date("due_date", { mode: "string" }),
     status: varchar("status", {
       length: 20,
       enum: ["pending", "in_review", "delivered", "approved", "rejected"],
@@ -242,6 +249,14 @@ export const deliverables = pgTable(
       ],
     }).onDelete("restrict").onUpdate("no action"),
     check(
+      "chk_deliverables_delivery_party",
+      sql`${table.deliveryParty} IN ('internal', 'client')`,
+    ),
+    check(
+      "chk_deliverables_client_due_date",
+      sql`${table.deliveryParty} <> 'client' OR ${table.dueDate} IS NOT NULL`,
+    ),
+    check(
       "chk_deliverables_status",
       sql`${table.status} IN ('pending', 'in_review', 'delivered', 'approved', 'rejected')`,
     ),
@@ -254,6 +269,7 @@ export const deliverables = pgTable(
       )`,
     ),
     index("idx_deliverables_project_status").on(table.projectId, table.status),
+    index("idx_deliverables_project_party_status").on(table.projectId, table.deliveryParty, table.status),
     index("idx_deliverables_milestone").on(table.milestoneId),
     index("idx_deliverables_approved_by").on(table.approvedByUserId),
   ],

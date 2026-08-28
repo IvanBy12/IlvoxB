@@ -1,6 +1,7 @@
 import type { FastifyPluginCallback, FastifyRequest } from "fastify";
 import type { AuditContext } from "../../common/audit/audit.js";
 import { successResponse } from "../../common/http/api-response.js";
+import type { DeliverableCreate } from "./project.types.js";
 import {
   DeliverableCreateBodySchema,
   DeliverablePatchBodySchema,
@@ -262,7 +263,12 @@ export const projectRoutes: FastifyPluginCallback<ProjectRoutesOptions> = (app, 
       await options.service.createDeliverable(
         actor(request),
         request.params.projectId,
-        request.body,
+        {
+          ...request.body,
+          ...(request.body.deliveryParty === undefined
+            ? {}
+            : { deliveryParty: request.body.deliveryParty as "internal" | "client" }),
+        } as DeliverableCreate,
         auditContext(request),
       ),
     )),

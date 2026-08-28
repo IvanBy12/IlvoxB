@@ -52,6 +52,7 @@ describe.skipIf(testDatabaseUrl === undefined)("Phase 5 closure PostgreSQL behav
       "0005_phase4-5-services-manage.sql",
       "0006_phase5-member-revocation.sql",
       "0007_phase5-deliverable-milestone.sql",
+      "0013_project-deliverable-files.sql",
     ]) {
       await admin.query(readFileSync(resolve("drizzle", "migrations", migration), "utf8")
         .replaceAll("--> statement-breakpoint", ""));

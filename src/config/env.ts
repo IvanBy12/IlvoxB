@@ -71,6 +71,17 @@ const envSchema = z
     CLERK_AUTHORIZED_PARTIES: optionalCsvUrls,
     CLERK_AUDIENCE: optionalCsv,
     CLIENT_APP_URL: optionalUrl,
+    FILE_STORAGE_PROVIDER: z.enum(["disabled", "r2"]).default("disabled"),
+    R2_ENDPOINT: optionalUrl,
+    R2_REGION: z.string().min(1).default("auto"),
+    R2_BUCKET: optionalString,
+    R2_ACCESS_KEY_ID: optionalString,
+    R2_SECRET_ACCESS_KEY: optionalString,
+    FILE_DOCUMENT_MAX_BYTES: z.coerce.number().int().min(1).max(104_857_600).default(26_214_400),
+    FILE_IMAGE_MAX_BYTES: z.coerce.number().int().min(1).max(104_857_600).default(15_728_640),
+    FILE_ZIP_MAX_BYTES: z.coerce.number().int().min(1).max(524_288_000).default(104_857_600),
+    FILE_UPLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(900),
+    FILE_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(3_600).default(300),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV === "production" && env.DATABASE_URL === undefined) {
@@ -96,6 +107,14 @@ const envSchema = z
     }
     if (env.CLERK_WEBHOOKS_ENABLED && env.DATABASE_URL === undefined) {
       context.addIssue({ code: "custom", path: ["DATABASE_URL"], message: "DATABASE_URL is required when Clerk webhooks are enabled" });
+    }
+    if (env.FILE_STORAGE_PROVIDER === "r2") {
+      for (const [key, value] of [
+        ["R2_ENDPOINT", env.R2_ENDPOINT], ["R2_BUCKET", env.R2_BUCKET],
+        ["R2_ACCESS_KEY_ID", env.R2_ACCESS_KEY_ID], ["R2_SECRET_ACCESS_KEY", env.R2_SECRET_ACCESS_KEY],
+      ] as const) {
+        if (value === undefined) context.addIssue({ code: "custom", path: [key], message: `${key} is required when R2 storage is enabled` });
+      }
     }
   });
 

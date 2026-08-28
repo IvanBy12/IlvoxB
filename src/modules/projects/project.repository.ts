@@ -72,6 +72,8 @@ interface DeliverableRow extends QueryResultRow {
   readonly milestone_id: string | null;
   readonly name: string;
   readonly description: string | null;
+  readonly delivery_party: DeliverableRecord["deliveryParty"];
+  readonly due_date: string | null;
   readonly status: DeliverableRecord["status"];
   readonly approved_by_user_id: string | null;
   readonly approved_at: Date | null;
@@ -100,7 +102,7 @@ const MILESTONE_SELECT = `SELECT m.id, m.project_id, m.organization_id, m.name, 
   FROM project_milestones m`;
 
 const DELIVERABLE_SELECT = `SELECT d.id, d.project_id, d.organization_id, d.milestone_id,
-  d.name, d.description,
+  d.name, d.description, d.delivery_party, d.due_date::text,
   d.status, d.approved_by_user_id, d.approved_at, d.created_at, d.updated_at
   FROM deliverables d`;
 
@@ -164,6 +166,8 @@ function mapDeliverable(row: DeliverableRow): DeliverableRecord {
     milestoneId: row.milestone_id,
     name: row.name,
     description: row.description,
+    deliveryParty: row.delivery_party,
+    dueDate: row.due_date,
     status: row.status,
     approvedByUserId: row.approved_by_user_id,
     approvedAt: row.approved_at,
@@ -746,16 +750,22 @@ export class PostgresProjectRepository implements ProjectRepository {
           await this.selectMilestone(client, projectId, input.milestoneId, true) === null) {
         return "not_found";
       }
+      const deliveryParty = input.deliveryParty ?? "internal";
+      if (deliveryParty === "client" && input.dueDate === undefined) return "invalid_dates";
+      if (input.dueDate !== undefined &&
+          (input.dueDate < project.startDate || input.dueDate > project.dueDate)) return "invalid_dates";
       const inserted = await client.query<{ readonly id: string }>(
         `INSERT INTO deliverables (
-           project_id, organization_id, milestone_id, name, description, status
-         ) VALUES ($1,$2,$3,$4,$5,'pending') RETURNING id`,
+           project_id, organization_id, milestone_id, name, description, delivery_party, due_date, status
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,'pending') RETURNING id`,
         [
           projectId,
           project.organizationId,
           input.milestoneId ?? null,
           input.name.trim(),
           input.description ?? null,
+          deliveryParty,
+          input.dueDate ?? null,
         ],
       );
       const id = inserted.rows[0]!.id;
@@ -765,7 +775,13 @@ export class PostgresProjectRepository implements ProjectRepository {
         action: "deliverable.created",
         entityType: "deliverable",
         entityId: id,
-        newValues: { projectId, milestoneId: input.milestoneId ?? null, status: "pending" },
+        newValues: {
+          projectId,
+          milestoneId: input.milestoneId ?? null,
+          deliveryParty,
+          dueDate: input.dueDate ?? null,
+          status: "pending",
+        },
       });
       return (await this.selectDeliverable(client, projectId, id))!;
     });
@@ -791,6 +807,11 @@ export class PostgresProjectRepository implements ProjectRepository {
           await this.selectMilestone(client, projectId, input.milestoneId, true) === null) {
         return "not_found";
       }
+      const nextDeliveryParty = input.deliveryParty ?? current.deliveryParty;
+      const nextDueDate = input.dueDate === undefined ? current.dueDate : input.dueDate;
+      if (nextDeliveryParty === "client" && nextDueDate === null) return "invalid_dates";
+      if (nextDueDate !== null &&
+          (nextDueDate < project.startDate || nextDueDate > project.dueDate)) return "invalid_dates";
       const fields: string[] = [];
       const values: unknown[] = [];
       const set = (column: string, value: unknown): void => {
@@ -800,6 +821,8 @@ export class PostgresProjectRepository implements ProjectRepository {
       if (input.name !== undefined) set("name", input.name.trim());
       if (input.description !== undefined) set("description", input.description);
       if (input.milestoneId !== undefined) set("milestone_id", input.milestoneId);
+      if (input.deliveryParty !== undefined) set("delivery_party", input.deliveryParty);
+      if (input.dueDate !== undefined) set("due_date", input.dueDate);
       if (input.status !== undefined) {
         set("status", input.status);
         if (input.status === "approved") {

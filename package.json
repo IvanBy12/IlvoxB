@@ -57,6 +57,8 @@
     "smoke:phase8d2:internal-invitations": "tsx scripts/smoke-phase8d2-internal-invitations.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1119.0",
+    "@aws-sdk/s3-request-presigner": "^3.1119.0",
     "@clerk/backend": "^3.12.0",
     "@clerk/fastify": "^3.1.54",
     "@fastify/cors": "^11.3.0",

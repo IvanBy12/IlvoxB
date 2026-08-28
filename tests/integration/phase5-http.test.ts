@@ -78,6 +78,8 @@ const deliverable = {
   milestoneId: MILESTONE_ID,
   name: "Deliverable",
   description: null,
+  deliveryParty: "internal" as const,
+  dueDate: null,
   status: "pending" as const,
   approvedByUserId: null,
   approvedAt: null,
