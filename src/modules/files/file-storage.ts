@@ -85,6 +85,8 @@ export class R2FileStorage implements FileStorage {
   private readonly client: S3Client;
   constructor(private readonly options: R2FileStorageOptions) {
     this.client = new S3Client({ region: options.region, endpoint: options.endpoint, forcePathStyle: true,
+      // R2 reports the whole-object checksum on ranged GETs; the partial body cannot be compared to it.
+      responseChecksumValidation: "WHEN_REQUIRED",
       credentials: { accessKeyId: options.accessKeyId, secretAccessKey: options.secretAccessKey } });
   }
   async createUploadUrl(objectKey: string, mimeType: string, sizeBytes: number, ttlSeconds: number, checksumSha256?: string): Promise<SignedStorageUrl> {
@@ -92,7 +94,13 @@ export class R2FileStorage implements FileStorage {
     const encodedChecksum = checksumSha256 === undefined ? undefined : Buffer.from(checksumSha256, "hex").toString("base64");
     const command = new PutObjectCommand({ Bucket: this.options.bucket, Key: objectKey, ContentType: mimeType,
       ContentLength: sizeBytes, ...(encodedChecksum === undefined ? {} : { ChecksumSHA256: encodedChecksum }) });
-    return { url: await getSignedUrl(this.client, command, { expiresIn: ttlSeconds }), expiresAt: new Date(Date.now() + ttlSeconds * 1_000), headers: { "Content-Type": mimeType,
+    return { url: await getSignedUrl(this.client, command, {
+      expiresIn: ttlSeconds,
+      signableHeaders: new Set(["content-type"]),
+      ...(encodedChecksum === undefined ? {} : {
+        unhoistableHeaders: new Set(["x-amz-checksum-sha256"]),
+      }),
+    }), expiresAt: new Date(Date.now() + ttlSeconds * 1_000), headers: { "Content-Type": mimeType,
       ...(encodedChecksum === undefined ? {} : { "x-amz-checksum-sha256": encodedChecksum }) } };
   }
   async createDownloadUrl(objectKey: string, downloadName: string, ttlSeconds: number): Promise<SignedStorageUrl> {

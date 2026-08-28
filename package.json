@@ -56,7 +56,8 @@
     "openapi:phase8d2": "node scripts/generate-phase8d2-openapi.mjs",
     "openapi:phase8d3": "node scripts/generate-phase8d3-openapi.mjs",
     "smoke:phase8d2:internal-invitations": "tsx scripts/smoke-phase8d2-internal-invitations.ts",
-    "smoke:phase8d3:personal": "tsx scripts/smoke-phase8d3-personal.ts"
+    "smoke:phase8d3:personal": "tsx scripts/smoke-phase8d3-personal.ts",
+    "smoke:r2:complete": "tsx scripts/smoke-r2-complete.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1119.0",

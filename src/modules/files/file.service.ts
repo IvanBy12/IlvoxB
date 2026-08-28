@@ -105,8 +105,7 @@ export class FileService {
   async listDeliverableFiles(actor: ActorContext, deliverableId: string) {
     const files = await this.repository.listByDeliverable(deliverableId, this.scope(actor, "read"), this.audiences(actor));
     if (files === null) throw notFound();
-    return files.filter((file) => actor.internal || file.status === "active" ||
-      (file.status === "pending_upload" && file.uploadedByUserId === actor.localUserId)).map(publicFile);
+    return files.filter((file) => file.status === "active").map(publicFile);
   }
 
   async createDownloadUrl(actor: ActorContext, fileId: string) {

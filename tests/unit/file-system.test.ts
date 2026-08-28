@@ -5,7 +5,7 @@ import type { ActorContext, AuthorizedRepositoryScope } from "../../src/common/a
 import { AppError } from "../../src/common/errors/app-error.js";
 import { FilePolicy } from "../../src/modules/files/file-policy.js";
 import { FileService } from "../../src/modules/files/file.service.js";
-import { MemoryFileStorage } from "../../src/modules/files/file-storage.js";
+import { MemoryFileStorage, R2FileStorage } from "../../src/modules/files/file-storage.js";
 import type {
   CreatePendingFileInput,
   DeliverableFileContext,
@@ -148,6 +148,37 @@ describe("central file policy", () => {
   });
 });
 
+describe("R2 presigned PUT contract", () => {
+  it("keeps SHA-256 as a required signed header and signs the PNG MIME without logging the URL", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const storage = new R2FileStorage({
+        endpoint: "https://example.r2.cloudflarestorage.com",
+        region: "auto",
+        bucket: "ilvox-test",
+        accessKeyId: "TESTACCESSKEY",
+        secretAccessKey: "test-secret",
+      });
+      const checksumHex = "a".repeat(64);
+      const signed = await storage.createUploadUrl("PHASE_R2_PRESIGNED_TEST.png", "image/png", 8, 300, checksumHex);
+      const url = new URL(signed.url);
+      const signedHeaders = (url.searchParams.get("X-Amz-SignedHeaders") ?? "").split(";");
+      expect(url.searchParams.has("x-amz-checksum-sha256")).toBe(false);
+      expect(signedHeaders).toEqual(expect.arrayContaining(["content-type", "x-amz-checksum-sha256"]));
+      expect(signed.headers).toEqual({
+        "Content-Type": "image/png",
+        "x-amz-checksum-sha256": Buffer.from(checksumHex, "hex").toString("base64"),
+      });
+      expect(log).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+      error.mockRestore();
+    }
+  });
+});
+
 describe("file service upload and download flow", () => {
   const internal = actor({ id: USER_INTERNAL, internal: true, global: true });
   const clientA = actor({ id: USER_CLIENT_A, internal: false, organizationId: ORG_A });
@@ -163,6 +194,19 @@ describe("file service upload and download flow", () => {
     expect(first.file.checksumSha256).toBe(checksumSha256);
     expect(first.upload.headers).toHaveProperty("x-amz-checksum-sha256");
     expect(first.upload.url).not.toBe(second.upload.url);
+  });
+
+  it("creates a valid PNG intent and does not list its pending metadata as an available file", async () => {
+    const { service } = harness();
+    const intent = await service.createUploadIntent(internal, {
+      deliverableId: DELIVERABLE_A,
+      originalName: "proof.png",
+      mimeType: "image/png",
+      sizeBytes: 8,
+      checksumSha256: "b".repeat(64),
+    }, audit);
+    expect(intent.upload.headers["Content-Type"]).toBe("image/png");
+    await expect(service.listDeliverableFiles(internal, DELIVERABLE_A)).resolves.toEqual([]);
   });
 
   it("rejects forbidden types and size before creating metadata", async () => {
@@ -190,6 +234,13 @@ describe("file service upload and download flow", () => {
     expect(signed.url).toContain("memory://download/");
     expect(signed.expiresAt.getTime()).toBeGreaterThan(Date.now());
     await expect(service.createDownloadUrl(clientB, stored.id)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("does not activate a pending file when the object does not exist", async () => {
+    const { service, repository } = harness();
+    const intent = await service.createUploadIntent(internal, { deliverableId: DELIVERABLE_A, originalName: "missing.png", mimeType: "image/png", sizeBytes: 8 }, audit);
+    await expect(service.complete(internal, intent.file.id, audit)).rejects.toMatchObject({ statusCode: 409 });
+    expect(repository.files.get(intent.file.id)?.status).toBe("pending_upload");
   });
 
   it("quarantines an uploaded object whose signature does not match its declared type", async () => {
