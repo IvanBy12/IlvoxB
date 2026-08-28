@@ -1,5 +1,6 @@
-import type { Pool, QueryResultRow } from "pg";
+import type { Pool, PoolClient, QueryResultRow } from "pg";
 import type { AuthorizedRepositoryScope } from "../../common/auth/authorization.types.js";
+import { insertAuditEvent, type AuditContext } from "../../common/audit/audit.js";
 import { paginationMeta, paginationOffset } from "../../common/http/pagination.js";
 import type {
   EligibilityContext,
@@ -7,6 +8,7 @@ import type {
   EligibleUserPurpose,
   ResolvedEligibilityContext,
   UserCatalogItem,
+  UserCatalogDetail,
   UserCatalogListInput,
   UserCatalogRepository,
 } from "./user-catalog.types.js";
@@ -18,6 +20,10 @@ interface CatalogRow extends QueryResultRow {
   readonly status: UserCatalogItem["status"];
   readonly is_internal: boolean;
   readonly roles: string[];
+  readonly internal_roles: string[];
+  readonly has_client_access: boolean;
+  readonly identity_synchronized: boolean;
+  readonly effective_permissions: string[];
   readonly created_at: Date;
 }
 
@@ -49,6 +55,18 @@ const CATALOG_SQL = `SELECT u.id,
   ) AS is_internal,
   COALESCE(array_agg(DISTINCT effective_role.code ORDER BY effective_role.code)
     FILTER (WHERE effective_role.code IS NOT NULL), ARRAY[]::varchar[]) AS roles,
+  COALESCE((SELECT array_agg(internal_r.code ORDER BY internal_r.code)
+    FROM user_roles internal_ur JOIN roles internal_r ON internal_r.id=internal_ur.role_id AND internal_r.scope='global'
+    WHERE internal_ur.user_id=u.id), ARRAY[]::varchar[]) AS internal_roles,
+  EXISTS (SELECT 1 FROM organization_memberships client_om
+    WHERE client_om.user_id=u.id AND client_om.status='active') AS has_client_access,
+  u.last_synced_at IS NOT NULL AS identity_synchronized,
+  COALESCE((SELECT array_agg(DISTINCT effective_p.code ORDER BY effective_p.code)
+    FROM user_roles permission_ur
+    JOIN roles permission_r ON permission_r.id=permission_ur.role_id AND permission_r.scope='global'
+    JOIN role_permissions permission_rp ON permission_rp.role_id=permission_r.id
+    JOIN permissions effective_p ON effective_p.id=permission_rp.permission_id
+    WHERE permission_ur.user_id=u.id), ARRAY[]::varchar[]) AS effective_permissions,
   u.created_at
   FROM app_users u
   LEFT JOIN LATERAL (${EFFECTIVE_ROLES_SQL}) effective_role ON true`;
@@ -61,9 +79,76 @@ function mapCatalog(row: CatalogRow): UserCatalogItem {
     status: row.status,
     isInternal: row.is_internal,
     roles: row.roles,
+    internalRoles: row.internal_roles,
+    hasClientAccess: row.has_client_access,
     createdAt: row.created_at,
     lastAccessAt: null,
   };
+}
+
+function mapCatalogDetail(row: CatalogRow): UserCatalogDetail {
+  return {
+    ...mapCatalog(row),
+    identitySynchronized: row.identity_synchronized,
+    effectivePermissions: row.effective_permissions,
+  };
+}
+
+async function transaction<T>(pool: Pool, operation: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await operation(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function findInternalById(client: PoolClient, userId: string, forUpdate = false): Promise<UserCatalogDetail | null> {
+  if (forUpdate) {
+    const locked = await client.query("SELECT id FROM app_users WHERE id=$1 FOR UPDATE", [userId]);
+    if (locked.rowCount === 0) return null;
+  }
+  const result = await client.query<CatalogRow>(
+    `${CATALOG_SQL} WHERE u.id=$1
+      AND EXISTS (SELECT 1 FROM user_roles target_ur JOIN roles target_r
+        ON target_r.id=target_ur.role_id AND target_r.scope='global' WHERE target_ur.user_id=u.id)
+     GROUP BY u.id`,
+    [userId],
+  );
+  return result.rows[0] === undefined ? null : mapCatalogDetail(result.rows[0]);
+}
+
+async function hasEffectiveAdminPermission(client: PoolClient, userId: string, excludedRoleId?: string): Promise<boolean> {
+  const values: unknown[] = [userId];
+  const excluded = excludedRoleId === undefined ? "" : `AND ur.role_id <> $${values.push(excludedRoleId)}`;
+  const result = await client.query(
+    `SELECT 1 FROM user_roles ur
+     JOIN roles r ON r.id=ur.role_id AND r.scope='global'
+     JOIN role_permissions rp ON rp.role_id=r.id
+     JOIN permissions p ON p.id=rp.permission_id AND p.code='users.manage'
+     WHERE ur.user_id=$1 ${excluded} LIMIT 1`,
+    values,
+  );
+  return result.rowCount === 1;
+}
+
+async function otherActiveAdministratorExists(client: PoolClient, userId: string): Promise<boolean> {
+  const result = await client.query(
+    `SELECT 1 FROM app_users u
+     JOIN user_roles ur ON ur.user_id=u.id
+     JOIN roles r ON r.id=ur.role_id AND r.scope='global'
+     JOIN role_permissions rp ON rp.role_id=r.id
+     JOIN permissions p ON p.id=rp.permission_id AND p.code='users.manage'
+     WHERE u.status='active' AND u.id<>$1 LIMIT 1`,
+    [userId],
+  );
+  return result.rowCount === 1;
 }
 
 function scopeSql(
@@ -194,15 +279,144 @@ export class PostgresUserCatalogRepository implements UserCatalogRepository {
       [...values, input.pageSize, paginationOffset(input)],
     );
     const total = Number(count.rows[0]?.total ?? 0);
-    return { items: result.rows.map(mapCatalog), pagination: paginationMeta(input, total) };
+    const summaryResult = await this.pool.query<{
+      readonly active: string; readonly pending: string; readonly blocked: string; readonly deleted: string;
+    }>(
+      `SELECT
+        count(*) FILTER (WHERE u.status='active')::text AS active,
+        count(*) FILTER (WHERE u.status='pending')::text AS pending,
+        count(*) FILTER (WHERE u.status='blocked')::text AS blocked,
+        count(*) FILTER (WHERE u.status='deleted')::text AS deleted
+       FROM app_users u WHERE EXISTS (
+         SELECT 1 FROM user_roles summary_ur JOIN roles summary_r
+           ON summary_r.id=summary_ur.role_id AND summary_r.scope='global'
+         WHERE summary_ur.user_id=u.id)`,
+    );
+    const summary = summaryResult.rows[0];
+    return {
+      items: result.rows.map(mapCatalog),
+      pagination: paginationMeta(input, total),
+      summary: {
+        active: Number(summary?.active ?? 0), pending: Number(summary?.pending ?? 0),
+        blocked: Number(summary?.blocked ?? 0), deleted: Number(summary?.deleted ?? 0),
+      },
+    };
   }
 
-  async findById(userId: string): Promise<UserCatalogItem | null> {
+  async findById(userId: string): Promise<UserCatalogDetail | null> {
     const result = await this.pool.query<CatalogRow>(
-      `${CATALOG_SQL} WHERE u.id = $1 GROUP BY u.id`,
+      `${CATALOG_SQL} WHERE u.id = $1
+       AND EXISTS (SELECT 1 FROM user_roles detail_ur JOIN roles detail_r
+         ON detail_r.id=detail_ur.role_id AND detail_r.scope='global' WHERE detail_ur.user_id=u.id)
+       GROUP BY u.id`,
       [userId],
     );
-    return result.rows[0] === undefined ? null : mapCatalog(result.rows[0]);
+    return result.rows[0] === undefined ? null : mapCatalogDetail(result.rows[0]);
+  }
+
+  activate(userId: string, actorUserId: string, audit: AuditContext) {
+    return transaction(this.pool, async (client) => {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('ilvox-internal-user-administration'))");
+      const current = await findInternalById(client, userId, true);
+      if (current === null) return { kind: "not_found" } as const;
+      if (current.status === "deleted") return { kind: "deleted" } as const;
+      if (current.status === "active") return { kind: "unchanged", user: current } as const;
+      if (current.status !== "pending" && current.status !== "blocked") return { kind: "invalid_state" } as const;
+      await client.query("UPDATE app_users SET status='active',updated_at=now() WHERE id=$1", [userId]);
+      const action = current.status === "blocked" ? "internal_user.reactivated" : "internal_user.activated";
+      await insertAuditEvent(client, {
+        ...audit, actorUserId, action, entityType: "app_user", entityId: userId,
+        oldValues: { status: current.status }, newValues: { status: "active" },
+      });
+      return { kind: "changed", user: (await findInternalById(client, userId))! } as const;
+    });
+  }
+
+  block(userId: string, actorUserId: string, audit: AuditContext) {
+    return transaction(this.pool, async (client) => {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('ilvox-internal-user-administration'))");
+      const current = await findInternalById(client, userId, true);
+      if (current === null) return { kind: "not_found" } as const;
+      if (current.status === "deleted") return { kind: "deleted" } as const;
+      if (current.status === "blocked") return { kind: "unchanged", user: current } as const;
+      if (current.status !== "active") return { kind: "invalid_state" } as const;
+      if (await hasEffectiveAdminPermission(client, userId) && !await otherActiveAdministratorExists(client, userId)) {
+        return { kind: "last_administrator" } as const;
+      }
+      await client.query("UPDATE app_users SET status='blocked',updated_at=now() WHERE id=$1", [userId]);
+      await insertAuditEvent(client, {
+        ...audit, actorUserId, action: "internal_user.blocked", entityType: "app_user", entityId: userId,
+        oldValues: { status: "active" }, newValues: { status: "blocked" },
+      });
+      return { kind: "changed", user: (await findInternalById(client, userId))! } as const;
+    });
+  }
+
+  grantRole(userId: string, roleCode: string, actorUserId: string, audit: AuditContext) {
+    return transaction(this.pool, async (client) => {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('ilvox-internal-user-administration'))");
+      const current = await findInternalById(client, userId, true);
+      if (current === null) return { kind: "not_found" } as const;
+      if (current.status === "deleted") return { kind: "deleted" } as const;
+      if (roleCode === "super_admin") return { kind: "protected_role" } as const;
+      const role = await client.query<{ readonly id: string }>(
+        `SELECT r.id FROM roles r WHERE r.scope='global' AND r.code=$2
+         AND NOT EXISTS (
+           SELECT 1 FROM role_permissions target_rp WHERE target_rp.role_id=r.id AND NOT EXISTS (
+             SELECT 1 FROM user_roles actor_ur
+             JOIN roles actor_r ON actor_r.id=actor_ur.role_id AND actor_r.scope='global'
+             JOIN role_permissions actor_rp ON actor_rp.role_id=actor_r.id
+             WHERE actor_ur.user_id=$1 AND actor_rp.permission_id=target_rp.permission_id))
+         FOR UPDATE`,
+        [actorUserId, roleCode],
+      );
+      const roleId = role.rows[0]?.id;
+      if (roleId === undefined) return { kind: "role_not_assignable" } as const;
+      const inserted = await client.query(
+        `INSERT INTO user_roles (user_id,role_id,role_scope,assigned_by_user_id)
+         VALUES ($1,$2,'global',$3) ON CONFLICT (user_id,role_id) DO NOTHING`,
+        [userId, roleId, actorUserId],
+      );
+      if (inserted.rowCount === 0) return { kind: "unchanged", user: current } as const;
+      await insertAuditEvent(client, {
+        ...audit, actorUserId, action: "internal_user.role_granted", entityType: "app_user", entityId: userId,
+        newValues: { roleCode },
+      });
+      return { kind: "changed", user: (await findInternalById(client, userId))! } as const;
+    });
+  }
+
+  revokeRole(userId: string, roleCode: string, actorUserId: string, audit: AuditContext) {
+    return transaction(this.pool, async (client) => {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('ilvox-internal-user-administration'))");
+      const current = await findInternalById(client, userId, true);
+      if (current === null) return { kind: "not_found" } as const;
+      if (current.status === "deleted") return { kind: "deleted" } as const;
+      if (roleCode === "super_admin") return { kind: "protected_role" } as const;
+      const role = await client.query<{ readonly id: string }>(
+        "SELECT id FROM roles WHERE scope='global' AND code=$1 FOR UPDATE", [roleCode],
+      );
+      const roleId = role.rows[0]?.id;
+      if (roleId === undefined) return { kind: "role_not_assignable" } as const;
+      const assigned = await client.query("SELECT 1 FROM user_roles WHERE user_id=$1 AND role_id=$2", [userId, roleId]);
+      if (assigned.rowCount === 0) return { kind: "unchanged", user: current } as const;
+      if (current.status === "active" && await hasEffectiveAdminPermission(client, userId) &&
+          !await hasEffectiveAdminPermission(client, userId, roleId) && !await otherActiveAdministratorExists(client, userId)) {
+        return { kind: "last_administrator" } as const;
+      }
+      const internalRoleCount = await client.query<{ readonly total: number }>(
+        `SELECT count(*)::integer AS total FROM user_roles ur JOIN roles r
+         ON r.id=ur.role_id AND r.scope='global' WHERE ur.user_id=$1`, [userId],
+      );
+      if ((internalRoleCount.rows[0]?.total ?? 0) <= 1) return { kind: "last_internal_role" } as const;
+      await client.query("DELETE FROM user_roles WHERE user_id=$1 AND role_id=$2", [userId, roleId]);
+      await insertAuditEvent(client, {
+        ...audit, actorUserId, action: "internal_user.role_revoked", entityType: "app_user", entityId: userId,
+        oldValues: { roleCode },
+      });
+      const updated = await findInternalById(client, userId);
+      return { kind: "changed", user: updated ?? { ...current, internalRoles: [], effectivePermissions: [] } } as const;
+    });
   }
 
   async resolveContext(

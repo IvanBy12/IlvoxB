@@ -24,10 +24,14 @@ function identity(internal = true, granted = permissions): IdentityRepository {
 }
 
 function repository(): UserCatalogRepository {
-  const item = { id: USER_A, displayName: "Owner", email: "owner@example.test", status: "active" as const, isInternal: true, roles: ["super_admin"], createdAt: now, lastAccessAt: null };
+  const item = { id: USER_A, displayName: "Owner", email: "owner@example.test", status: "active" as const, isInternal: true, roles: ["super_admin"], internalRoles: ["super_admin"], hasClientAccess: false, createdAt: now, lastAccessAt: null, identitySynchronized: true, effectivePermissions: ["users.manage"] };
   return {
-    list: vi.fn<UserCatalogRepository["list"]>((input) => Promise.resolve({ items: [item], pagination: { ...input, total: 1, totalPages: 1 } })),
+    list: vi.fn<UserCatalogRepository["list"]>((input) => Promise.resolve({ items: [item], pagination: { ...input, total: 1, totalPages: 1 }, summary: { active: 1, pending: 0, blocked: 0, deleted: 0 } })),
     findById: vi.fn<UserCatalogRepository["findById"]>((id) => Promise.resolve(id === USER_A ? item : null)),
+    activate: vi.fn<UserCatalogRepository["activate"]>(() => Promise.resolve({ kind: "unchanged", user: item })),
+    block: vi.fn<UserCatalogRepository["block"]>(() => Promise.resolve({ kind: "changed", user: { ...item, status: "blocked" } })),
+    grantRole: vi.fn<UserCatalogRepository["grantRole"]>(() => Promise.resolve({ kind: "unchanged", user: item })),
+    revokeRole: vi.fn<UserCatalogRepository["revokeRole"]>(() => Promise.resolve({ kind: "unchanged", user: item })),
     resolveContext: vi.fn<UserCatalogRepository["resolveContext"]>(() => Promise.resolve({ organizationId: ORG_A, projectId: PROJECT })),
     listEligible: vi.fn<UserCatalogRepository["listEligible"]>(() => Promise.resolve([{ id: USER_A, displayName: "Owner", email: "owner@example.test", roles: ["super_admin"] }])),
   };
@@ -42,7 +46,7 @@ describe("Phase 8D.1 user catalog HTTP", () => {
     app = await buildTestApp({}, { authenticationProvider: authenticated, identityRepository: identity(), userCatalogRepository: repo });
     const response = await app.inject({ method: "GET", url: "/api/v1/users?page=2&pageSize=10&search=own&status=active&type=internal&role=super_admin&sortBy=email&sortDirection=asc" });
     expect(response.statusCode).toBe(200);
-    expect(response.json().data.items[0]).toEqual({ id: USER_A, displayName: "Owner", email: "owner@example.test", status: "active", isInternal: true, roles: ["super_admin"], createdAt: now.toISOString(), lastAccessAt: null });
+    expect(response.json().data.items[0]).toEqual({ id: USER_A, displayName: "Owner", email: "owner@example.test", status: "active", isInternal: true, roles: ["super_admin"], internalRoles: ["super_admin"], hasClientAccess: false, createdAt: now.toISOString(), lastAccessAt: null });
     expect(JSON.stringify(response.json())).not.toContain("clerkUserId");
     const list = vi.mocked(repo.list);
     expect(list).toHaveBeenCalledWith(expect.objectContaining({ page: 2, pageSize: 10, type: "internal", role: "super_admin" }));

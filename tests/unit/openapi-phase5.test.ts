@@ -77,8 +77,8 @@ describe("Accumulated OpenAPI through Phase 8D.1", () => {
       Object.keys(item)
         .filter((method) => methods.has(method))
         .map((method) => `${method.toUpperCase()} ${path}`));
-    expect(document.info.version).toBe("0.8.4");
-    expect(operations).toHaveLength(83);
+    expect(document.info.version).toBe("0.8.5");
+    expect(operations).toHaveLength(87);
     expect(phase5Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase6Operations.every((operation) => operations.includes(operation))).toBe(true);
     expect(phase8aOperations.every((operation) => operations.includes(operation))).toBe(true);
@@ -89,12 +89,13 @@ describe("Accumulated OpenAPI through Phase 8D.1", () => {
     expect(phase5Operations).toHaveLength(24);
   });
 
-  it("does not add file or deletion routes and documents milestoneId on deliverables only", () => {
+  it("keeps deletion limited to role revocation and documents milestoneId on deliverables only", () => {
     const schemas = (document as unknown as {
       components: { schemas: Record<string, { properties?: Record<string, unknown> }> };
     }).components.schemas;
     expect(Object.keys(document.paths).some((path) => /file|upload|download/i.test(path))).toBe(false);
-    expect(Object.values(document.paths).some((path) => "delete" in path)).toBe(false);
+    expect(Object.entries(document.paths).filter(([, path]) => "delete" in path).map(([path]) => path))
+      .toEqual(["/users/{userId}/roles/{roleCode}"]);
     expect(schemas.MilestoneCreate?.properties).not.toHaveProperty("milestoneId");
     expect(schemas.MilestonePatch?.properties).not.toHaveProperty("milestoneId");
     expect(schemas.DeliverableCreate?.properties).toHaveProperty("milestoneId");

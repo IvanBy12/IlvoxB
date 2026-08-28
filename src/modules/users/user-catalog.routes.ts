@@ -1,4 +1,5 @@
-import type { FastifyPluginCallback } from "fastify";
+import type { FastifyPluginCallback, FastifyRequest } from "fastify";
+import type { AuditContext } from "../../common/audit/audit.js";
 import { successResponse } from "../../common/http/api-response.js";
 import {
   EligibleUserQuerySchema,
@@ -7,15 +8,28 @@ import {
   UserCatalogListQuerySchema,
   UserCatalogListResponseSchema,
   UserIdParamsSchema,
+  UserMutationResponseSchema,
+  UserRoleGrantBodySchema,
+  UserRoleParamsSchema,
   type EligibleUserHttpQuery,
   type UserCatalogListQuery,
   type UserIdParams,
+  type UserRoleGrantBody,
+  type UserRoleParams,
 } from "./user-catalog.schemas.js";
 import type { UserCatalogService } from "./user-catalog.service.js";
 import type { EligibleUserPurpose, UserCatalogListInput, UserCatalogType } from "./user-catalog.types.js";
 import type { LocalUserStatus } from "../../common/auth/authorization.types.js";
 
 export interface UserCatalogRoutesOptions { readonly service: UserCatalogService; }
+
+function auditContext(request: FastifyRequest): AuditContext {
+  return {
+    requestId: request.id,
+    ipAddress: request.ip,
+    ...(request.headers["user-agent"] === undefined ? {} : { userAgent: request.headers["user-agent"] }),
+  };
+}
 
 export const userCatalogRoutes: FastifyPluginCallback<UserCatalogRoutesOptions> = (app, options, done) => {
   app.get<{ Querystring: EligibleUserHttpQuery }>("/users/eligible", {
@@ -53,6 +67,42 @@ export const userCatalogRoutes: FastifyPluginCallback<UserCatalogRoutesOptions> 
   }, async (request) => {
     if (request.actor === null) throw new Error("Authenticated actor was not constructed");
     return successResponse(await options.service.get(request.actor, request.params.userId));
+  });
+
+  app.post<{ Params: UserIdParams }>("/users/:userId/activate", {
+    preHandler: app.requireActor,
+    schema: { params: UserIdParamsSchema, response: { 200: UserMutationResponseSchema } },
+  }, async (request) => {
+    if (request.actor === null) throw new Error("Authenticated actor was not constructed");
+    return successResponse(await options.service.activate(request.actor, request.params.userId, auditContext(request)));
+  });
+
+  app.post<{ Params: UserIdParams }>("/users/:userId/block", {
+    preHandler: app.requireActor,
+    schema: { params: UserIdParamsSchema, response: { 200: UserMutationResponseSchema } },
+  }, async (request) => {
+    if (request.actor === null) throw new Error("Authenticated actor was not constructed");
+    return successResponse(await options.service.block(request.actor, request.params.userId, auditContext(request)));
+  });
+
+  app.post<{ Params: UserIdParams; Body: UserRoleGrantBody }>("/users/:userId/roles", {
+    preHandler: app.requireActor,
+    schema: { params: UserIdParamsSchema, body: UserRoleGrantBodySchema, response: { 200: UserMutationResponseSchema } },
+  }, async (request) => {
+    if (request.actor === null) throw new Error("Authenticated actor was not constructed");
+    return successResponse(await options.service.grantRole(
+      request.actor, request.params.userId, request.body.roleCode, auditContext(request),
+    ));
+  });
+
+  app.delete<{ Params: UserRoleParams }>("/users/:userId/roles/:roleCode", {
+    preHandler: app.requireActor,
+    schema: { params: UserRoleParamsSchema, response: { 200: UserMutationResponseSchema } },
+  }, async (request) => {
+    if (request.actor === null) throw new Error("Authenticated actor was not constructed");
+    return successResponse(await options.service.revokeRole(
+      request.actor, request.params.userId, request.params.roleCode, auditContext(request),
+    ));
   });
   done();
 };

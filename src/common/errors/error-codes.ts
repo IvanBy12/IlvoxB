@@ -12,6 +12,7 @@ export const ErrorCode = {
   ProfilePending: "PROFILE_PENDING",
   ProfileInactive: "PROFILE_INACTIVE",
   Conflict: "CONFLICT",
+  LastAdministratorProtected: "LAST_ADMINISTRATOR_PROTECTED",
   WebhookInvalid: "WEBHOOK_INVALID",
   InvitationInvalid: "INVITATION_INVALID",
   OrganizationNotFound: "ORGANIZATION_NOT_FOUND",
