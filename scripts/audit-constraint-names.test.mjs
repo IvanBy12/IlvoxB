@@ -5,6 +5,7 @@ import {
   classifyLeadConversionCheck,
   compareConstraintNames,
   extractExportedConstraintNames,
+  extractExportedForeignKeyStructures,
 } from "./audit-constraint-names.lib.mjs";
 
 const exportedSql = `
@@ -13,7 +14,7 @@ const exportedSql = `
     CONSTRAINT "uq_leads_email" UNIQUE("email")
   );
   ALTER TABLE "leads" ADD CONSTRAINT "fk_leads_service"
-    FOREIGN KEY ("service_id") REFERENCES "services"("id");
+    FOREIGN KEY ("service_id") REFERENCES "public"."services"("id") ON DELETE restrict ON UPDATE no action;
 `;
 const closureExportedSql = `${exportedSql}
   CREATE TABLE "project_members" (
@@ -68,6 +69,51 @@ test("reports both missing and unexpected physical constraints", () => {
     missingInDatabase: ["expected"],
     unexpectedInDatabase: ["actual"],
   });
+});
+
+test("compares foreign keys structurally and accepts PostgreSQL identifier truncation", () => {
+  const longName = "diagnostic_option_need_points_option_id_diagnostic_options_id_fk";
+  const sql = `${exportedSql}
+    ALTER TABLE "diagnostic_option_need_points" ADD CONSTRAINT "${longName}"
+      FOREIGN KEY ("option_id") REFERENCES "public"."diagnostic_options"("id")
+      ON DELETE restrict ON UPDATE no action;
+  `;
+  assert.deepEqual(extractExportedForeignKeyStructures(sql), [
+    "diagnostic_option_need_points(option_id) -> diagnostic_options(id) delete=restrict update=no action",
+    "leads(service_id) -> services(id) delete=restrict update=no action",
+  ]);
+  const structuralPhysical = physical();
+  Object.assign(structuralPhysical[1], {
+    table_name: "leads",
+    columns: ["service_id"],
+    referenced_table: "services",
+    referenced_columns: ["id"],
+    on_delete: "restrict",
+    on_update: "no action",
+  });
+  const result = buildConstraintAudit({
+    exportedSql: sql,
+    physicalConstraints: [
+      ...structuralPhysical,
+      {
+        contype: "f",
+        conname: "diagnostic_option_need_points_option_id_diagnostic_options_id_f",
+        definition: "FOREIGN KEY",
+        table_name: "diagnostic_option_need_points",
+        columns: ["option_id"],
+        referenced_table: "diagnostic_options",
+        referenced_columns: ["id"],
+        on_delete: "restrict",
+        on_update: "no action",
+      },
+    ],
+    duplicatePhysicalIndexes: [],
+    validationSchemas: 0,
+  });
+  assert.equal(result.foreignKeyStructures.checked, true);
+  assert.deepEqual(result.foreignKeyStructures.missingInDatabase, []);
+  assert.deepEqual(result.foreignKeyStructures.unexpectedInDatabase, []);
+  assert.equal(result.ok, true);
 });
 
 test("accepts the lead conversion check before and after migration 0004", () => {

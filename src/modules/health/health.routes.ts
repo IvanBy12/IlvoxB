@@ -8,15 +8,23 @@ export interface HealthRoutesOptions {
 }
 
 export const healthRoutes: FastifyPluginCallback<HealthRoutesOptions> = (app, options, done) => {
+  const liveness = (): HealthResponse =>
+    successResponse({
+      status: "ok" as const,
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: process.uptime(),
+    });
+
+  app.get<{ Reply: HealthResponse }>(
+    "/health",
+    { schema: { response: { 200: HealthResponseSchema } } },
+    liveness,
+  );
+
   app.get<{ Reply: HealthResponse }>(
     "/health/live",
     { schema: { response: { 200: HealthResponseSchema } } },
-    () =>
-      successResponse({
-        status: "ok" as const,
-        timestamp: new Date().toISOString(),
-        uptimeSeconds: process.uptime(),
-      }),
+    liveness,
   );
 
   app.get<{ Reply: HealthResponse }>(

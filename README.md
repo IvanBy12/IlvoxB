@@ -37,9 +37,11 @@ Signing Secret del endpoint configurado en Clerk; nunca lo añadas al repositori
 ```powershell
 npm.cmd run check
 npm.cmd run db:check
+npm.cmd run db:migrate
+npm.cmd run db:validate:migrate
 npm.cmd run audit:sql -- drizzle\baseline\0000_ilvox_complete_reconstructed.sql
-npm.cmd run audit:rbac -- drizzle\baseline\0000_ilvox_complete_reconstructed.sql
-npm.cmd run audit:parity -- drizzle\baseline\0000_ilvox_complete_reconstructed.sql
+npm.cmd run audit:rbac
+npm.cmd run audit:parity
 npm.cmd run audit:constraint-names
 npm.cmd run db:validate:runtime -- --database-url
 npm.cmd run db:validate:phase3 -- --database-url
@@ -58,14 +60,12 @@ La API esta en `docs/openapi.json` (0.6.0, 55 operaciones). La implementacion
 de tickets se documenta en `docs/phase-6-tickets-implementation.md`.
 
 La baseline exacta esta en `drizzle/baseline/`. No use `drizzle-kit push`.
-La base local `GestionIlvox.public` reconoce 0000-0008; 0000-0005 fueron
-reconocidas sin reaplicar su DDL y el migrador oficial aplico solo 0006-0007.
-El despliegue operativo de Fase 6 aplico exclusivamente 0008 y confirmo un
-segundo migrate no-op. Para auditar el estado, use
-`npm run db:operate:phase6 -- inspect`. Para repetir el procedimiento en otro
-entorno, use
-`npm run db:operate:phase5 -- inspect` y siga
-`docs/drizzle-history-recognition.md`.
+El operador vigente es `npm run db:migrate`: valida PostgreSQL 18.x, hashes,
+historia, catálogo y RBAC antes de aplicar únicamente migraciones pendientes
+hasta 0014. Una base vacía requiere la confirmación explícita
+`--bootstrap-empty=<nombre-exacto>`. El procedimiento para Azure está en
+`docs/azure-database-migrations.md`. Los operadores `db:operate:phase5` y
+`db:operate:phase6` se conservan solo como evidencia histórica de esas fases.
 
 La evidencia de backup, hashes, migracion, health, smokes y limpieza esta en
 `docs/phase-6-operational-deployment.md`. `npm audit` continua como gate de

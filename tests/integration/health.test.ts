@@ -21,11 +21,15 @@ describe("application skeleton", () => {
 
   it("returns liveness and security headers", async () => {
     app = await buildTestApp();
-    const response = await app.inject({ method: "GET", url: "/health/live" });
+    const responses = await Promise.all(
+      ["/health", "/health/live"].map((url) => app!.inject({ method: "GET", url })),
+    );
 
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ data: { status: "ok" } });
-    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    for (const response of responses) {
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ data: { status: "ok" } });
+      expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    }
   });
 
   it("returns ready when all registered checks pass", async () => {
@@ -60,6 +64,12 @@ describe("application skeleton", () => {
     expect(() => loadEnv({ ...TEST_ENV, NODE_ENV: "production", DATABASE_URL: "" })).toThrowError(
       "Invalid environment configuration",
     );
+  });
+
+  it("uses Azure-compatible production host and local development defaults", () => {
+    expect(loadEnv({ NODE_ENV: "production", DATABASE_URL: "postgresql://user:password@database.example/ilvox" }))
+      .toMatchObject({ HOST: "0.0.0.0", PORT: 3001 });
+    expect(loadEnv({ NODE_ENV: "development" })).toMatchObject({ HOST: "127.0.0.1", PORT: 3001 });
   });
 
   it("uses the standard safe error response", async () => {

@@ -157,7 +157,11 @@ const envSchema = z
 export type AppEnv = z.output<typeof envSchema>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
-  const result = envSchema.safeParse(source);
+  const host = source.HOST?.trim();
+  const normalizedSource = host === undefined || host.length === 0
+    ? { ...source, HOST: source.NODE_ENV === "production" ? "0.0.0.0" : DEFAULT_HOST }
+    : source;
+  const result = envSchema.safeParse(normalizedSource);
   if (result.success) return result.data;
 
   const details = result.error.issues.map((issue) => ({

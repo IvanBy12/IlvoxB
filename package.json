@@ -36,6 +36,8 @@
     "db:generate": "drizzle-kit generate",
     "db:export": "drizzle-kit export",
     "db:check": "drizzle-kit check",
+    "db:migrate": "node scripts/database-migrate.mjs",
+    "db:validate:migrate": "node scripts/validate-database-migrate.mjs",
     "db:validate:runtime": "node scripts/database-runtime-validate.mjs",
     "db:validate:phase3": "node scripts/validate-phase3-migrations.mjs",
     "db:validate:phase45": "node scripts/validate-phase45-migrations.mjs",

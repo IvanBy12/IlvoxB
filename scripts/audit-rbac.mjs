@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 import pg from "pg";
 import "dotenv/config";
 
-const sqlPath = process.argv[2];
+const sqlPath = process.argv[2] ?? resolve(
+  "drizzle",
+  "baseline",
+  "0000_ilvox_complete_reconstructed.sql",
+);
 
 if (!sqlPath) {
   console.error("Usage: node scripts/audit-rbac.mjs <sql-file> [--matrix]");
@@ -199,7 +203,8 @@ if (!sqlPath) {
   } else {
     const connectionString = process.env.DATABASE_URL;
     if (connectionString === undefined || connectionString.trim() === "") {
-      console.log(JSON.stringify(summary, null, 2));
+      console.error("DATABASE_URL_MISSING");
+      process.exitCode = 2;
     } else {
       const client = new pg.Client({ connectionString });
       let currentDatabase;
@@ -233,6 +238,16 @@ if (!sqlPath) {
                AS services_manage_leaks,
             (SELECT count(*)::integer FROM role_permissions rp
              JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id
+             WHERE p.code IN ('tickets.update','tickets.change_priority')
+               AND r.scope='global' AND r.code IN ('super_admin','admin','support_agent'))
+               AS ticket_operation_targets,
+            (SELECT count(*)::integer FROM role_permissions rp
+             JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id
+             WHERE p.code IN ('tickets.update','tickets.change_priority')
+               AND NOT (r.scope='global' AND r.code IN ('super_admin','admin','support_agent')))
+               AS ticket_operation_leaks,
+            (SELECT count(*)::integer FROM role_permissions rp
+             JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id
              WHERE p.code IN (
                'permissions.manage','roles.assign_super_admin','security.manage',
                'system.configure','organizations.access_all'
@@ -250,13 +265,15 @@ if (!sqlPath) {
       }
       const currentOk =
         currentDatabase.roles === 11 &&
-        currentDatabase.permissions === 37 &&
-        currentDatabase.associations === 159 &&
-        currentDatabase.distinct_associations === 159 &&
+        currentDatabase.permissions === 39 &&
+        currentDatabase.associations === 165 &&
+        currentDatabase.distinct_associations === 165 &&
         currentDatabase.duplicate_associations === 0 &&
         currentDatabase.orphan_associations === 0 &&
         currentDatabase.services_manage_targets === 2 &&
         currentDatabase.services_manage_leaks === 0 &&
+        currentDatabase.ticket_operation_targets === 6 &&
+        currentDatabase.ticket_operation_leaks === 0 &&
         currentDatabase.sensitive_targets === 5 &&
         currentDatabase.sensitive_leaks === 0;
       console.log(JSON.stringify({
