@@ -1,0 +1,50 @@
+name: Build ILVOX Backend
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ilvoxacrprod
+
+      - name: Build Docker image
+        run: |
+          IMAGE="ilvoxacrprod.azurecr.io/ilvox-backend"
+
+          docker build \
+            --pull \
+            -t "$IMAGE:${GITHUB_SHA}" \
+            -t "$IMAGE:latest" \
+            .
+
+      - name: Push Docker image
+        run: |
+          IMAGE="ilvoxacrprod.azurecr.io/ilvox-backend"
+
+          docker push "$IMAGE:${GITHUB_SHA}"
+          docker push "$IMAGE:latest"
+
+      - name: Verify image in ACR
+        run: |
+          az acr repository show-tags \
+            --name ilvoxacrprod \
+            --repository ilvox-backend \
+            --output table
